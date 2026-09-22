@@ -10,6 +10,13 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body class="overlay-body">
+  <!-- Indicateur discret en haut à droite (affiche le statut quand l'overlay est actif) -->
+  <aside id="overlay-status-indicator" class="status-indicator active" aria-label="Statut de l'overlay">
+    <span class="status-dot"></span>
+    <span id="status-label" class="status-label">BORDELBOX</span>
+    <span class="status-key">F9</span>
+  </aside>
+
   <!-- Conteneur principal de l'overlay (transparent par défaut) -->
   <main id="overlay-container" class="overlay-container" aria-live="polite">
 

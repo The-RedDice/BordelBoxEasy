@@ -6,9 +6,21 @@ use tauri::{
     tray::TrayIconBuilder,
     Emitter, Manager,
 };
+use tauri_plugin_global_shortcut::{GlobalShortcutExt, ShortcutState};
 
 fn main() {
     tauri::Builder::default()
+        .plugin(
+            tauri_plugin_global_shortcut::Builder::new()
+                .with_handler(|app, _shortcut, event| {
+                    if event.state() == ShortcutState::Pressed {
+                        if let Some(window) = app.get_webview_window("main") {
+                            let _ = window.eval("if (window.toggleOverlay) window.toggleOverlay();");
+                        }
+                    }
+                })
+                .build(),
+        )
         .setup(|app| {
             if let Some(main_window) = app.get_webview_window("main") {
                 // Les clics de souris passent à travers pour ne pas gêner en jeu !
@@ -16,6 +28,10 @@ fn main() {
                 let _ = main_window.set_decorations(false);
                 let _ = main_window.set_shadow(false);
             }
+
+            // Enregistrement des raccourcis clavier globaux pour activer/désactiver l'overlay en jeu
+            let _ = app.global_shortcut().register("F9");
+            let _ = app.global_shortcut().register("Ctrl+Shift+O");
 
             // 1. Sous-menu pour régler la taille de l'overlay (LiveChat)
             let size_75 = MenuItem::with_id(app, "scale_75", "Petite (75%)", true, None::<&str>)?;
@@ -31,6 +47,7 @@ fn main() {
             )?;
 
             // 2. Options supplémentaires
+            let toggle_item = MenuItem::with_id(app, "toggle_overlay", "👁️ Activer/Désactiver l'overlay (F9)", true, None::<&str>)?;
             let server_item = MenuItem::with_id(app, "config_server", "🌐 Configurer le serveur...", true, None::<&str>)?;
             let test_item = MenuItem::with_id(app, "test_card", "🎯 Tester une carte", true, None::<&str>)?;
             let reload_item = MenuItem::with_id(app, "reload", "🔄 Recharger l'overlay", true, None::<&str>)?;
@@ -40,7 +57,7 @@ fn main() {
             // 3. Construction du menu contextuel (clic droit)
             let menu = Menu::with_items(
                 app,
-                &[&size_submenu, &server_item, &test_item, &reload_item, &sep, &quit_item],
+                &[&toggle_item, &size_submenu, &server_item, &test_item, &reload_item, &sep, &quit_item],
             )?;
 
             // 4. Initialisation de l'icône dans la barre des tâches (System Tray)
@@ -52,6 +69,12 @@ fn main() {
                 .on_menu_event(|app, event| {
                     match event.id().as_ref() {
                         "quit" => app.exit(0),
+                        "toggle_overlay" => {
+                            if let Some(window) = app.get_webview_window("main") {
+                                let _ = window.eval("if (window.toggleOverlay) window.toggleOverlay();");
+                            }
+                            let _ = app.emit("toggle_overlay", ());
+                        }
                         "scale_75" => {
                             if let Some(window) = app.get_webview_window("main") {
                                 let _ = window.eval("if (window.setOverlayScale) window.setOverlayScale(0.75);");

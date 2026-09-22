@@ -1,6 +1,6 @@
 /**
  * BordelBoxEasy - Client Overlay
- * Écoute les événements WebSocket et pilote l'affichage des médias et du texte
+ * Écoute les événements WebSocket et pilote l'affichage des médias, du texte et de l'indicateur d'état
  */
 
 // Détection de l'adresse du serveur BordelBox
@@ -48,21 +48,106 @@ const captionBox = document.getElementById('caption-box');
 const captionText = document.getElementById('caption-text');
 const progressBar = document.getElementById('progress-bar');
 
+// Indicateur discret de statut en haut à droite
+const statusIndicator = document.getElementById('overlay-status-indicator');
+const statusLabel = document.getElementById('status-label');
+
 let currentItemId = null;
 let itemTimer = null;
 let currentVolume = parseFloat(localStorage.getItem('bordelbox_volume') || '0.8');
+
+// État d'activation de l'overlay (sauvegardé dans localStorage)
+let isOverlayEnabled = localStorage.getItem('bordelbox_enabled') !== 'false';
+let statusHideTimeout = null;
 
 // Applique le volume initial
 playerVideo.volume = currentVolume;
 playerAudio.volume = currentVolume;
 
 /**
+ * Met à jour l'indicateur discret de statut en haut à droite
+ */
+function updateStatusIndicator() {
+  if (!statusIndicator || !statusLabel) return;
+
+  if (statusHideTimeout) {
+    clearTimeout(statusHideTimeout);
+    statusHideTimeout = null;
+  }
+
+  if (isOverlayEnabled) {
+    statusIndicator.classList.remove('disabled');
+    statusIndicator.classList.add('active');
+    statusLabel.textContent = 'BORDELBOX';
+  } else {
+    statusIndicator.classList.remove('active');
+    statusIndicator.classList.add('disabled');
+    statusLabel.textContent = 'DÉSACTIVÉ';
+
+    // Après 3 secondes d'affichage de "DÉSACTIVÉ", on masque l'indicateur pour ne pas gêner l'écran
+    statusHideTimeout = setTimeout(() => {
+      statusIndicator.classList.remove('disabled');
+    }, 3000);
+  }
+}
+
+/**
+ * Active ou désactive l'overlay (raccourci F9 ou menu tray)
+ * @param {boolean|null} forceState
+ */
+function toggleOverlay(forceState = null) {
+  if (forceState !== null) {
+    isOverlayEnabled = Boolean(forceState);
+  } else {
+    isOverlayEnabled = !isOverlayEnabled;
+  }
+
+  localStorage.setItem('bordelbox_enabled', isOverlayEnabled.toString());
+  console.log(`[Overlay] Statut overlay basculé : ${isOverlayEnabled ? 'ACTIVÉ 🟢' : 'DÉSACTIVÉ 🔴'}`);
+
+  updateStatusIndicator();
+
+  if (!isOverlayEnabled) {
+    // Si désactivé, on stoppe et masque immédiatement tout média en cours
+    finishCurrentMedia();
+  }
+}
+
+// Initialisation de l'indicateur au chargement
+updateStatusIndicator();
+
+/**
+ * Démarre l'animation de la barre de progression
+ * @param {number} durationSeconds
+ */
+function startProgressBar(durationSeconds) {
+  if (!progressBar) return;
+  const sec = Math.max(0.5, parseFloat(durationSeconds) || 5);
+  // Réinitialisation avec forçage de reflow pour redémarrer l'animation de façon fluide
+  progressBar.style.animation = 'none';
+  void progressBar.offsetWidth;
+  progressBar.style.animation = `countdownAnim ${sec}s linear forwards`;
+}
+
+/**
+ * Arrête et réinitialise la barre de progression
+ */
+function stopProgressBar() {
+  if (!progressBar) return;
+  progressBar.style.animation = 'none';
+  progressBar.style.width = '0%';
+}
+
+/**
  * Cache tous les éléments multimédias
  */
 function hideAllMediaElements() {
+  stopProgressBar();
+
   playerVideo.classList.add('hidden');
   playerVideo.pause();
   playerVideo.src = '';
+  playerVideo.onloadedmetadata = null;
 
   playerImage.classList.add('hidden');
   playerImage.src = '';
@@ -70,6 +155,7 @@ function hideAllMediaElements() {
   playerAudioBox.classList.add('hidden');
   playerAudio.pause();
   playerAudio.src = '';
+  playerAudio.onloadedmetadata = null;
 
   textBox.classList.add('hidden');
   textContent.textContent = '';
@@ -101,6 +187,8 @@ function finishCurrentMedia() {
     itemTimer = null;
   }
 
+  stopProgressBar();
+
   // Animation de sortie
   mediaCard.classList.add('hiding');
 
@@ -112,20 +200,6 @@ function finishCurrentMedia() {
       socket.emit('media_ended', { id });
     }
   }, 350);
-}
-
-/**
- * Démarre l'animation de la barre de progression
- * @param {number} durationSeconds
- */
-function startProgressBar(durationSeconds) {
-  progressBar.style.transition = 'none';
-  progressBar.style.width = '100%';
-
-  requestAnimationFrame(() => {
-    progressBar.style.transition = `width ${durationSeconds}s linear`;
-    progressBar.style.width = '0%';
-  });
 }
 
 /**
@@ -171,6 +245,16 @@ function speakText(text, onEnded) {
  */
 function displayMediaItem(item) {
   if (!item) return;
+
+  // Si l'overlay est désactivé par le joueur (raccourci F9), on ignore le média et on prévient le serveur
+  if (!isOverlayEnabled) {
+    console.log('[Overlay] Média ignoré car l\'overlay est actuellement DÉSACTIVÉ (F9) :', item.id);
+    if (socket && socket.connected) {
+      socket.emit('media_ended', { id: item.id });
+    }
+    return;
+  }
+
   console.log('[Overlay] Affichage média :', item);
   hideAllMediaElements();
 
@@ -190,6 +274,8 @@ function displayMediaItem(item) {
 
   mediaCard.classList.remove('hidden');
   mediaCard.classList.remove('hiding');
+
+  // Lance la barre de progression par défaut sur maxDuration
   startProgressBar(maxDuration);
 
   // Sécurité générale de durée maximale
@@ -205,6 +291,12 @@ function displayMediaItem(item) {
       playerVideo.classList.remove('hidden');
       playerVideo.src = item.url;
       playerVideo.volume = currentVolume;
+      playerVideo.onloadedmetadata = () => {
+        if (playerVideo.duration && isFinite(playerVideo.duration)) {
+          const actualDuration = Math.min(playerVideo.duration, maxDuration);
+          startProgressBar(actualDuration);
+        }
+      };
       playerVideo.play().catch((err) => {
         console.warn('[Overlay] Autoplay bloqué ou erreur vidéo :', err);
       });
@@ -215,6 +307,12 @@ function displayMediaItem(item) {
       playerAudioBox.classList.remove('hidden');
       playerAudio.src = item.url;
       playerAudio.volume = currentVolume;
+      playerAudio.onloadedmetadata = () => {
+        if (playerAudio.duration && isFinite(playerAudio.duration)) {
+          const actualDuration = Math.min(playerAudio.duration, maxDuration);
+          startProgressBar(actualDuration);
+        }
+      };
       playerAudio.play().catch((err) => {
         console.warn('[Overlay] Autoplay bloqué ou erreur audio :', err);
       });
@@ -335,11 +433,20 @@ function configureServerUrl() {
   }
 }
 
-// Exposition sur l'objet window pour invocation directe depuis Tauri (eval)
+// Exposition sur l'objet window pour invocation directe depuis Tauri (eval) ou la console
 window.displayMediaItem = displayMediaItem;
 window.setOverlayScale = setOverlayScale;
 window.triggerTestCard = triggerTestCard;
 window.configureServerUrl = configureServerUrl;
+window.toggleOverlay = toggleOverlay;
+
+// Raccourci clavier local (au cas où la fenêtre est ciblée ou dans le navigateur)
+window.addEventListener('keydown', (e) => {
+  if (e.key === 'F9' || (e.ctrlKey && e.shiftKey && (e.key === 'O' || e.key === 'o'))) {
+    e.preventDefault();
+    toggleOverlay();
+  }
+});
 
 // Écoute des événements émis par le menu System Tray de Tauri (clic droit)
 function initTauriTrayListeners() {
@@ -354,6 +461,10 @@ function initTauriTrayListeners() {
 
     window.__TAURI__.event.listen('trigger_test_overlay', () => {
       triggerTestCard();
+    });
+
+    window.__TAURI__.event.listen('toggle_overlay', () => {
+      toggleOverlay();
     });
   } else {
     // Si l'objet Tauri n'est pas encore injecté, on réessaie après un court délai
