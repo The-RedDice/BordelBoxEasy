@@ -235,6 +235,8 @@ socket.on('volume_updated', (newVol) => {
   playerVideo.volume = currentVolume;
   playerAudio.volume = currentVolume;
   console.log('[Overlay] Volume ajusté à :', Math.round(currentVolume * 100) + '%');
+});
+
 // Gestion de la taille / échelle de l'overlay (LiveChat)
 function setOverlayScale(scale) {
   const s = parseFloat(scale) || 1.0;

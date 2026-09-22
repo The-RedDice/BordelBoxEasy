@@ -1,5 +1,5 @@
 @echo off
-title BordelBoxEasy - Serveur & Bot
+title "BordelBoxEasy - Serveur & Bot"
 cd /d "%~dp0"
 
 :: Ajoute Node.js au PATH de la session au cas où l'IDE n'a pas encore redémarré
