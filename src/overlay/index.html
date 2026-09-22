@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BordelBoxEasy - Overlay</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="overlay-body">
+  <!-- Conteneur principal de l'overlay (transparent par défaut) -->
+  <main id="overlay-container" class="overlay-container" aria-live="polite">
+
+    <!-- Carte de média ou texte pop-up -->
+    <div id="media-card" class="media-card hidden">
+      <!-- En-tête de l'expéditeur -->
+      <div class="author-header">
+        <img id="author-avatar" class="author-avatar" src="" alt="Avatar">
+        <div class="author-info">
+          <span id="author-name" class="author-name">Pseudo</span>
+          <span id="media-badge" class="media-badge">MÉDIA</span>
+        </div>
+      </div>
+
+      <!-- Conteneur d'affichage des médias -->
+      <div id="display-area" class="display-area">
+        <!-- Balise Vidéo -->
+        <video id="player-video" class="media-element hidden" playsinline></video>
+
+        <!-- Balise Image / GIF -->
+        <img id="player-image" class="media-element hidden" alt="Média affiché">
+
+        <!-- Lecteur Audio avec égaliseur visuel animé -->
+        <div id="player-audio-box" class="audio-box hidden">
+          <div class="audio-equalizer">
+            <span class="bar"></span>
+            <span class="bar"></span>
+            <span class="bar"></span>
+            <span class="bar"></span>
+            <span class="bar"></span>
+          </div>
+          <span class="audio-label">Lecture audio en cours...</span>
+          <audio id="player-audio"></audio>
+        </div>
+
+        <!-- Conteneur YouTube Embed -->
+        <div id="youtube-box" class="youtube-box hidden">
+          <div id="youtube-player"></div>
+        </div>
+
+        <!-- Carte texte pour la commande /texte -->
+        <div id="text-box" class="text-box hidden">
+          <p id="text-content" class="text-content"></p>
+        </div>
+      </div>
+
+      <!-- Légende / Texte supplémentaire sous le média (Commande /media avec texte) -->
+      <div id="caption-box" class="caption-box hidden">
+        <div class="caption-bubble">
+          <span class="caption-icon">💬</span>
+          <p id="caption-text" class="caption-text"></p>
+        </div>
+      </div>
+
+      <!-- Barre de progression de la durée -->
+      <div class="progress-bar-container">
+        <div id="progress-bar" class="progress-bar"></div>
+      </div>
+    </div>
+
+  </main>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

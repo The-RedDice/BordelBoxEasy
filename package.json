@@ -1,0 +1,31 @@
+{
+  "name": "bordelbox-easy",
+  "version": "1.0.0",
+  "description": "Overlay de bureau léger et transparent pour déconner entre potes avec un bot Discord",
+  "main": "src/server/index.js",
+  "scripts": {
+    "start": "node src/server/index.js",
+    "dev": "node --watch src/server/index.js",
+    "tauri": "tauri"
+  },
+  "keywords": [
+    "overlay",
+    "discord",
+    "bot",
+    "tauri",
+    "gaming",
+    "cacabox"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "discord.js": "^14.16.3",
+    "dotenv": "^16.4.5",
+    "express": "^4.21.0",
+    "lodash": "^4.18.1",
+    "socket.io": "^4.7.5"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2.0.0"
+  }
+}

@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BordelBoxEasy - Panneau de Contrôle & Tests</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-dark: #0f111a;
+      --card-bg: rgba(22, 26, 38, 0.85);
+      --card-border: rgba(255, 255, 255, 0.08);
+      --primary: #5865f2;
+      --primary-hover: #4752c4;
+      --accent: #eb459e;
+      --success: #57f287;
+      --danger: #ed4245;
+      --warning: #fee75c;
+      --text: #f6f6f6;
+      --text-muted: #949ba4;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg-dark);
+      background-image: 
+        radial-gradient(circle at 10% 20%, rgba(88, 101, 242, 0.12) 0%, transparent 40%),
+        radial-gradient(circle at 90% 80%, rgba(235, 69, 158, 0.1) 0%, transparent 40%);
+      color: var(--text);
+      font-family: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
+      min-height: 100vh;
+      padding: 30px 20px;
+    }
+
+    .container {
+      max-width: 960px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 16px;
+      padding-bottom: 20px;
+      border-bottom: 1px solid var(--card-border);
+    }
+
+    .logo-box {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .logo-icon {
+      font-size: 2.2rem;
+      background: rgba(88, 101, 242, 0.2);
+      padding: 8px 12px;
+      border-radius: 16px;
+      border: 1px solid rgba(88, 101, 242, 0.3);
+    }
+
+    h1 {
+      font-size: 1.8rem;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+    }
+
+    .subtitle {
+      font-size: 0.9rem;
+      color: var(--text-muted);
+    }
+
+    .status-pills {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-size: 0.82rem;
+      font-weight: 600;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--card-border);
+    }
+
+    .pill-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--success);
+      box-shadow: 0 0 8px var(--success);
+    }
+
+    /* Grille principale */
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(420px, 1fr));
+      gap: 20px;
+    }
+
+    .card {
+      background: var(--card-bg);
+      backdrop-filter: blur(12px);
+      border: 1px solid var(--card-border);
+      border-radius: 18px;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+    }
+
+    .card-title {
+      font-size: 1.15rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .card-badge {
+      font-size: 0.75rem;
+      background: rgba(88, 101, 242, 0.2);
+      color: var(--primary);
+      padding: 2px 8px;
+      border-radius: 6px;
+      border: 1px solid rgba(88, 101, 242, 0.3);
+    }
+
+    /* Formulaires & Inputs */
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    label {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--text-muted);
+    }
+
+    input[type="text"], select {
+      background: rgba(10, 12, 18, 0.6);
+      border: 1px solid var(--card-border);
+      border-radius: 10px;
+      padding: 12px 14px;
+      color: #fff;
+      font-family: inherit;
+      font-size: 0.95rem;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    input[type="text"]:focus, select:focus {
+      border-color: var(--primary);
+    }
+
+    .checkbox-label {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      cursor: pointer;
+      font-size: 0.95rem;
+      color: var(--text);
+    }
+
+    .checkbox-label input {
+      accent-color: var(--primary);
+      width: 18px;
+      height: 18px;
+    }
+
+    /* Boutons */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      background: var(--primary);
+      color: #fff;
+      border: none;
+      border-radius: 12px;
+      padding: 12px 18px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      text-decoration: none;
+    }
+
+    .btn:hover {
+      background: var(--primary-hover);
+      transform: translateY(-2px);
+      box-shadow: 0 4px 15px rgba(88, 101, 242, 0.4);
+    }
+
+    .btn-secondary {
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid var(--card-border);
+    }
+
+    .btn-secondary:hover {
+      background: rgba(255, 255, 255, 0.15);
+      box-shadow: none;
+    }
+
+    .btn-danger {
+      background: var(--danger);
+    }
+
+    .btn-danger:hover {
+      background: #c03537;
+      box-shadow: 0 4px 15px rgba(237, 66, 69, 0.4);
+    }
+
+    .btn-group {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    /* Quick Action Buttons */
+    .quick-tests {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+    }
+
+    .quick-btn {
+      padding: 10px;
+      font-size: 0.85rem;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--card-border);
+      color: var(--text);
+      border-radius: 10px;
+      cursor: pointer;
+      transition: 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+
+    .quick-btn:hover {
+      background: rgba(88, 101, 242, 0.2);
+      border-color: var(--primary);
+    }
+
+    /* Carte de statut de diffusion */
+    .live-status-card {
+      background: rgba(14, 18, 28, 0.95);
+      border: 1px solid rgba(88, 101, 242, 0.3);
+      border-radius: 18px;
+      padding: 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+
+    .live-info {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .live-badge {
+      background: rgba(235, 69, 158, 0.2);
+      color: var(--accent);
+      border: 1px solid var(--accent);
+      padding: 4px 10px;
+      border-radius: 8px;
+      font-size: 0.75rem;
+      font-weight: 800;
+    }
+
+    .volume-slider-box {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .volume-slider-box input[type="range"] {
+      accent-color: var(--primary);
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+
+    <!-- En-tête -->
+    <header>
+      <div class="logo-box">
+        <span class="logo-icon">🔊</span>
+        <div>
+          <h1>BordelBoxEasy</h1>
+          <p class="subtitle">Panneau de contrôle & Test des commandes pour l'overlay entre potes</p>
+        </div>
+      </div>
+
+      <div class="status-pills">
+        <div class="pill">
+          <span class="pill-dot"></span>
+          <span>Serveur : En ligne</span>
+        </div>
+        <a href="/overlay" target="_blank" class="btn btn-secondary" style="padding: 6px 14px; font-size: 0.82rem;">
+          🖥️ Ouvrir l'Overlay dans un onglet
+        </a>
+      </div>
+    </header>
+
+    <!-- Barre d'état en direct -->
+    <div class="live-status-card">
+      <div class="live-info">
+        <span class="live-badge">FILE D'ATTENTE</span>
+        <div>
+          <strong id="queue-status-text">File vide (aucun média en cours)</strong>
+          <div style="font-size: 0.82rem; color: var(--text-muted);">Les médias envoyés sur Discord s'affichent automatiquement sur l'overlay.</div>
+        </div>
+      </div>
+
+      <div class="btn-group">
+        <div class="volume-slider-box">
+          <span style="font-size: 1.1rem;">🔊</span>
+          <input type="range" id="volume-slider" min="0" max="1" step="0.05" value="0.8">
+          <span id="volume-label" style="font-size: 0.85rem; width: 35px;">80%</span>
+        </div>
+        <button id="btn-skip" class="btn btn-secondary">⏭️ Passer (Skip)</button>
+        <button id="btn-clear" class="btn btn-danger">⏹️ Tout couper</button>
+      </div>
+    </div>
+
+    <!-- Grille de test des 2 commandes -->
+    <div class="grid">
+
+      <!-- 1. Test Commande /media -->
+      <div class="card">
+        <div class="card-title">
+          <span>🎬</span>
+          <span>Commande <code>/media</code></span>
+          <span class="card-badge">Média + Texte</span>
+        </div>
+        <p style="font-size: 0.85rem; color: var(--text-muted);">
+          Simule l'envoi d'une vidéo, image ou son avec un texte facultatif en légende sous le média.
+        </p>
+
+        <!-- Boutons de test rapide -->
+        <div class="quick-tests">
+          <button class="quick-btn" onclick="sendQuickMedia('video')">
+            🎥 Test Vidéo + Légende
+          </button>
+          <button class="quick-btn" onclick="sendQuickMedia('image')">
+            🖼️ Test Image Meme
+          </button>
+          <button class="quick-btn" onclick="sendQuickMedia('audio')">
+            🎵 Test Audio MP3
+          </button>
+          <button class="quick-btn" onclick="sendQuickMedia('gif')">
+            ✨ Test GIF Pop
+          </button>
+        </div>
+
+        <!-- Formulaire personnalisé -->
+        <div class="form-group">
+          <label for="custom-media-url">URL du média (MP4, WebM, MP3, GIF, PNG, JPG) :</label>
+          <input type="text" id="custom-media-url" placeholder="https://exemple.com/video.mp4">
+        </div>
+
+        <div class="form-group">
+          <label for="custom-media-type">Type de média :</label>
+          <select id="custom-media-type">
+            <option value="video">Vidéo (MP4 / WebM)</option>
+            <option value="image">Image / GIF</option>
+            <option value="audio">Audio (MP3 / WAV)</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="custom-media-caption">Texte / Légende sous le média (optionnel) :</label>
+          <input type="text" id="custom-media-caption" placeholder="Ex: Regardez ce clutch incroyable !">
+        </div>
+
+        <button id="btn-send-media" class="btn">
+          🚀 Envoyer /media à l'overlay
+        </button>
+      </div>
+
+      <!-- 2. Test Commande /texte -->
+      <div class="card">
+        <div class="card-title">
+          <span>💬</span>
+          <span>Commande <code>/texte</code></span>
+          <span class="card-badge">Texte + TTS</span>
+        </div>
+        <p style="font-size: 0.85rem; color: var(--text-muted);">
+          Simule l'envoi d'un message textuel avec l'avatar Discord et synthèse vocale à voix haute.
+        </p>
+
+        <div class="form-group">
+          <label for="text-message">Message à afficher :</label>
+          <input type="text" id="text-message" value="Les gars, qui est chaud pour lancer une game maintenant ?">
+        </div>
+
+        <label class="checkbox-label">
+          <input type="checkbox" id="text-tts" checked>
+          <span>Activer la lecture vocale (TTS Web Speech)</span>
+        </label>
+
+        <!-- Préréglages rapides -->
+        <div class="quick-tests">
+          <button class="quick-btn" onclick="setTextPreset('Gros clutch en approche, regardez bien !')">
+            🎯 "Gros clutch"
+          </button>
+          <button class="quick-btn" onclick="setTextPreset('Mais non t es trop nul haha !')">
+            😂 "Trop nul"
+          </button>
+          <button class="quick-btn" onclick="setTextPreset('Pause pizza de 5 minutes les frères.')">
+            🍕 "Pause pizza"
+          </button>
+          <button class="quick-btn" onclick="setTextPreset('Alerte rouge, il y a un ennemi derrière toi !')">
+            🚨 "Alerte ennemi"
+          </button>
+        </div>
+
+        <button id="btn-send-text" class="btn" style="margin-top: auto;">
+          🗣️ Envoyer /texte à l'overlay
+        </button>
+      </div>
+
+    </div>
+
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    const socket = io();
+
+    const queueStatusText = document.getElementById('queue-status-text');
+    const volumeSlider = document.getElementById('volume-slider');
+    const volumeLabel = document.getElementById('volume-label');
+    const btnSkip = document.getElementById('btn-skip');
+    const btnClear = document.getElementById('btn-clear');
+
+    // Mise à jour de l'état de la queue
+    socket.on('queue_updated', (data) => {
+      if (data.current) {
+        queueStatusText.textContent = `En cours : [${data.current.type.toUpperCase()}] de ${data.current.author?.name || 'Inconnu'} (En attente : ${data.queueLength})`;
+      } else {
+        queueStatusText.textContent = `File vide (0 en attente)`;
+      }
+    });
+
+    // Volume
+    volumeSlider.addEventListener('input', (e) => {
+      const vol = e.target.value;
+      volumeLabel.textContent = Math.round(vol * 100) + '%';
+      socket.emit('change_volume', vol);
+    });
+
+    // Actions Skip & Clear
+    btnSkip.addEventListener('click', () => socket.emit('skip'));
+    btnClear.addEventListener('click', () => socket.emit('clear'));
+
+    // Envoi personnalisé /media
+    document.getElementById('btn-send-media').addEventListener('click', () => {
+      const url = document.getElementById('custom-media-url').value.trim() || 'https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4';
+      const type = document.getElementById('custom-media-type').value;
+      const text = document.getElementById('custom-media-caption').value.trim();
+
+      socket.emit('trigger_test', {
+        type,
+        url,
+        text,
+        author: {
+          name: 'Maxence (Test)',
+          avatar: 'https://cdn.discordapp.com/embed/avatars/1.png'
+        }
+      });
+    });
+
+    // Envoi personnalisé /texte
+    document.getElementById('btn-send-text').addEventListener('click', () => {
+      const message = document.getElementById('text-message').value.trim();
+      const tts = document.getElementById('text-tts').checked;
+
+      if (!message) return;
+
+      socket.emit('trigger_test', {
+        type: 'text',
+        message,
+        tts,
+        author: {
+          name: 'PoteDiscord (Test)',
+          avatar: 'https://cdn.discordapp.com/embed/avatars/4.png'
+        }
+      });
+    });
+
+    function setTextPreset(txt) {
+      document.getElementById('text-message').value = txt;
+    }
+
+    // Événements rapides de démo
+    function sendQuickMedia(kind) {
+      const author = {
+        name: 'MemeLord',
+        avatar: 'https://cdn.discordapp.com/embed/avatars/2.png'
+      };
+
+      if (kind === 'video') {
+        socket.emit('trigger_test', {
+          type: 'video',
+          url: 'https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4',
+          text: 'Regardez cette fleur légendaire !',
+          author
+        });
+      } else if (kind === 'image') {
+        socket.emit('trigger_test', {
+          type: 'image',
+          url: 'https://images.unsplash.com/photo-1534447677768-be436bb09401?w=600&auto=format&fit=crop&q=80',
+          text: 'Incroyable photo envoyée par le Discord !',
+          author
+        });
+      } else if (kind === 'audio') {
+        socket.emit('trigger_test', {
+          type: 'audio',
+          url: 'https://interactive-examples.mdn.mozilla.net/media/cc0-audio/t-rex-roar.mp3',
+          text: 'ATTENTION : Cri du T-Rex sauvage !',
+          author
+        });
+      } else if (kind === 'gif') {
+        socket.emit('trigger_test', {
+          type: 'image',
+          url: 'https://media.giphy.com/media/3o7TKSjRrfIPjeiVyM/giphy.gif',
+          text: 'Quand ton pote rate son ultime...',
+          author
+        });
+      }
+    }
+  </script>
+</body>
+</html>
