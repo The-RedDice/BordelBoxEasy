@@ -60,6 +60,55 @@ body.overlay-body {
   display: none !important;
 }
 
+/* Mode Fond Vert / Chroma Key : le média flotte directement sur le jeu sans boîte opaque */
+.media-card.chroma-mode {
+  background: transparent !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  border: none !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+}
+
+.media-card.chroma-mode .display-area {
+  background: transparent !important;
+  border-radius: 0;
+}
+
+.media-card.chroma-mode .author-header {
+  background: rgba(18, 20, 29, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 20px;
+  padding: 6px 14px;
+  width: fit-content;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+}
+
+.media-card.chroma-mode .media-badge {
+  background: rgba(87, 242, 135, 0.2) !important;
+  border-color: rgba(87, 242, 135, 0.5) !important;
+  color: #57f287 !important;
+}
+
+.media-card.chroma-mode .caption-bubble {
+  background: rgba(18, 20, 29, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+}
+
+#chroma-canvas {
+  max-width: 100%;
+  max-height: 480px;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  display: block;
+  filter: drop-shadow(0 6px 16px rgba(0, 0, 0, 0.65));
+}
+
 /* En-tête de l'auteur */
 .author-header {
   display: flex;

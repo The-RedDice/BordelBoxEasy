@@ -1,6 +1,7 @@
 /**
  * BordelBoxEasy - Client Overlay
- * Écoute les événements WebSocket et pilote l'affichage des médias, du texte et de l'indicateur d'état
+ * Écoute les événements WebSocket et pilote l'affichage des médias, du texte,
+ * du filtre Chroma Key (fond vert supprimé) et de l'indicateur d'état.
  */
 
 // Détection de l'adresse du serveur BordelBox
@@ -39,6 +40,13 @@ const mediaBadge = document.getElementById('media-badge');
 
 const playerVideo = document.getElementById('player-video');
 const playerImage = document.getElementById('player-image');
+const chromaCanvas = document.getElementById('chroma-canvas');
+const chromaCtx = chromaCanvas ? chromaCanvas.getContext('2d', { willReadFrequently: true }) : null;
+
+// Support CORS pour le traitement Chroma Key sur les URLs externes
+playerVideo.crossOrigin = 'anonymous';
+playerImage.crossOrigin = 'anonymous';
+
 const playerAudioBox = document.getElementById('player-audio-box');
 const playerAudio = document.getElementById('player-audio');
 const textBox = document.getElementById('text-box');
@@ -55,6 +63,10 @@ const statusLabel = document.getElementById('status-label');
 let currentItemId = null;
 let itemTimer = null;
 let currentVolume = parseFloat(localStorage.getItem('bordelbox_volume') || '0.8');
+
+// État du filtre Chroma Key (fond vert)
+let chromaActive = false;
+let chromaRafId = null;
 
 // État d'activation de l'overlay (sauvegardé dans localStorage)
 let isOverlayEnabled = localStorage.getItem('bordelbox_enabled') !== 'false';
@@ -139,18 +151,126 @@ function stopProgressBar() {
 }
 
 /**
- * Cache tous les éléments multimédias
+ * Algorithme Chroma Key en temps réel : suppression du fond vert avec adoucissement et despill
+ * @param {HTMLVideoElement|HTMLImageElement} sourceElement
+ */
+function renderChromaFrame(sourceElement) {
+  if (!chromaActive || !chromaCanvas || !chromaCtx) return;
+
+  const w = sourceElement.videoWidth || sourceElement.naturalWidth || sourceElement.width || 640;
+  const h = sourceElement.videoHeight || sourceElement.naturalHeight || sourceElement.height || 360;
+
+  if (w === 0 || h === 0) {
+    if (sourceElement.tagName === 'VIDEO' && !sourceElement.paused && !sourceElement.ended) {
+      chromaRafId = requestAnimationFrame(() => renderChromaFrame(sourceElement));
+    }
+    return;
+  }
+
+  if (chromaCanvas.width !== w || chromaCanvas.height !== h) {
+    chromaCanvas.width = w;
+    chromaCanvas.height = h;
+  }
+
+  try {
+    chromaCtx.drawImage(sourceElement, 0, 0, w, h);
+    const frame = chromaCtx.getImageData(0, 0, w, h);
+    const data = frame.data;
+    const len = data.length;
+
+    for (let i = 0; i < len; i += 4) {
+      const r = data[i];
+      const g = data[i + 1];
+      const b = data[i + 2];
+
+      const maxRB = Math.max(r, b);
+
+      // Critère fond vert : le vert domine nettement le rouge et le bleu
+      if (g > 65 && g > r * 1.25 && g > b * 1.25) {
+        const diff = g - maxRB;
+        if (diff > 35) {
+          // Complètement transparent
+          data[i + 3] = 0;
+        } else {
+          // Contour doux (anti-aliasing)
+          const factor = diff / 35;
+          data[i + 3] = Math.round((1 - factor) * 255);
+          // Élimination du reflet vert sur les contours (despill)
+          data[i + 1] = maxRB;
+        }
+      }
+    }
+
+    chromaCtx.putImageData(frame, 0, 0);
+  } catch (err) {
+    // Si la ressource externe bloque le canvas (CORS), on bascule proprement sur l'élément standard
+    console.warn('[Chroma Key] CORS externe non autorisé sur ce média, basculement en mode normal :', err.message);
+    stopChromaProcessing();
+    sourceElement.classList.remove('hidden');
+    return;
+  }
+
+  if (sourceElement.tagName === 'VIDEO' && !sourceElement.paused && !sourceElement.ended) {
+    chromaRafId = requestAnimationFrame(() => renderChromaFrame(sourceElement));
+  }
+}
+
+/**
+ * Lance le traitement Chroma Key sur la source vidéo ou image
+ * @param {HTMLVideoElement|HTMLImageElement} sourceElement
+ */
+function startChromaProcessing(sourceElement) {
+  stopChromaProcessing();
+  chromaActive = true;
+  if (chromaCanvas) chromaCanvas.classList.remove('hidden');
+
+  if (sourceElement.tagName === 'VIDEO') {
+    renderChromaFrame(sourceElement);
+  } else if (sourceElement.tagName === 'IMG') {
+    if (sourceElement.complete && sourceElement.naturalWidth > 0) {
+      renderChromaFrame(sourceElement);
+    } else {
+      sourceElement.onload = () => renderChromaFrame(sourceElement);
+    }
+  }
+}
+
+/**
+ * Arrête le traitement Chroma Key et nettoie le canvas
+ */
+function stopChromaProcessing() {
+  chromaActive = false;
+  if (chromaRafId) {
+    cancelAnimationFrame(chromaRafId);
+    chromaRafId = null;
+  }
+  if (chromaCanvas) {
+    chromaCanvas.classList.add('hidden');
+    if (chromaCtx && chromaCanvas.width > 0 && chromaCanvas.height > 0) {
+      chromaCtx.clearRect(0, 0, chromaCanvas.width, chromaCanvas.height);
+    }
+  }
+}
+
+/**
+ * Cache tous les éléments multimédias et réinitialise les styles
  */
 function hideAllMediaElements() {
   stopProgressBar();
+  stopChromaProcessing();
+
+  mediaCard.classList.remove('chroma-mode');
 
   playerVideo.classList.add('hidden');
   playerVideo.pause();
   playerVideo.src = '';
   playerVideo.onloadedmetadata = null;
+  playerVideo.onplay = null;
+  playerVideo.onloadeddata = null;
 
   playerImage.classList.add('hidden');
   playerImage.src = '';
+  playerImage.onload = null;
 
   playerAudioBox.classList.add('hidden');
   playerAudio.pause();
@@ -188,6 +308,7 @@ function finishCurrentMedia() {
   }
 
   stopProgressBar();
+  stopChromaProcessing();
 
   // Animation de sortie
   mediaCard.classList.add('hiding');
@@ -260,11 +381,20 @@ function displayMediaItem(item) {
 
   currentItemId = item.id;
   const maxDuration = item.maxDuration || 20;
+  const isChroma = Boolean(item.chromakey);
 
   // Auteur
   authorName.textContent = item.author?.name || 'Pote anonyme';
   authorAvatar.src = item.author?.avatar || 'https://cdn.discordapp.com/embed/avatars/0.png';
-  mediaBadge.textContent = (item.type || 'MÉDIA').toUpperCase();
+
+  // Mode Chroma Key (Fond vert) : affichage transparent sans carte opaque
+  if (isChroma) {
+    mediaCard.classList.add('chroma-mode');
+    mediaBadge.textContent = '🟢 FOND VERT';
+  } else {
+    mediaCard.classList.remove('chroma-mode');
+    mediaBadge.textContent = (item.type || 'MÉDIA').toUpperCase();
+  }
 
   // Légende supplémentaire sous le média (si renseignée dans /media)
   if (item.text && item.text.trim()) {
@@ -288,15 +418,24 @@ function displayMediaItem(item) {
   // Rendu selon le type
   switch (item.type) {
     case 'video':
-      playerVideo.classList.remove('hidden');
       playerVideo.src = item.url;
       playerVideo.volume = currentVolume;
+
+      if (isChroma) {
+        playerVideo.classList.add('hidden'); // Le canvas affiche le flux sans fond vert
+        playerVideo.onplay = () => startChromaProcessing(playerVideo);
+        playerVideo.onloadeddata = () => startChromaProcessing(playerVideo);
+      } else {
+        playerVideo.classList.remove('hidden');
+      }
+
       playerVideo.onloadedmetadata = () => {
         if (playerVideo.duration && isFinite(playerVideo.duration)) {
           const actualDuration = Math.min(playerVideo.duration, maxDuration);
           startProgressBar(actualDuration);
         }
       };
+
       playerVideo.play().catch((err) => {
         console.warn('[Overlay] Autoplay bloqué ou erreur vidéo :', err);
       });
@@ -320,8 +459,15 @@ function displayMediaItem(item) {
       break;
 
     case 'image':
-      playerImage.classList.remove('hidden');
       playerImage.src = item.url;
+
+      if (isChroma) {
+        playerImage.classList.add('hidden');
+        startChromaProcessing(playerImage);
+      } else {
+        playerImage.classList.remove('hidden');
+      }
+
       // Pour une image, durée par défaut de 8 secondes ou maxDuration
       const imageDisplayDuration = Math.min(8, maxDuration);
       if (itemTimer) clearTimeout(itemTimer);

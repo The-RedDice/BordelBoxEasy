@@ -82,6 +82,12 @@ function initBot(queue, config) {
           .setName('texte')
           .setDescription('Texte / légende facultative qui s\'affiche sous le média')
           .setRequired(false)
+      )
+      .addBooleanOption((opt) =>
+        opt
+          .setName('fond_vert')
+          .setDescription('Supprimer automatiquement le fond vert du média (Chroma Key)')
+          .setRequired(false)
       ),
 
     // 2. Commande /texte
@@ -153,6 +159,7 @@ function initBot(queue, config) {
       const fileAttachment = interaction.options.getAttachment('fichier');
       const urlOption = interaction.options.getString('url');
       const textOption = interaction.options.getString('texte') || '';
+      const fondVert = interaction.options.getBoolean('fond_vert') || false;
 
       if (!fileAttachment && !urlOption) {
         return interaction.reply({
@@ -176,12 +183,18 @@ function initBot(queue, config) {
         type: mediaType,
         url: mediaUrl,
         text: textOption,
+        chromakey: fondVert,
         author,
         duration: parseInt(process.env.MAX_MEDIA_DURATION, 10) || 20,
       });
 
+      const details = [];
+      if (textOption) details.push('avec texte');
+      if (fondVert) details.push('🟢 fond vert retiré');
+      const detailStr = details.length > 0 ? ` (${details.join(' • ')})` : '';
+
       return interaction.reply({
-        content: `🎉 Média envoyé à l'écran ! (${mediaType.toUpperCase()}${textOption ? ' avec texte' : ''})`,
+        content: `🎉 Média envoyé à l'écran ! [${mediaType.toUpperCase()}]${detailStr}`,
         ephemeral: false,
       });
     }
