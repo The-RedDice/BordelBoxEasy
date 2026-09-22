@@ -1,3 +1,7 @@
+:root {
+  --overlay-scale: 1;
+}
+
 /* Reset & Base Transparent */
 * {
   box-sizing: border-box;
@@ -220,22 +224,22 @@ body.overlay-body {
 @keyframes popIn {
   0% {
     opacity: 0;
-    transform: translateY(40px) scale(0.9);
+    transform: translateY(40px) scale(calc(var(--overlay-scale, 1) * 0.9));
   }
   100% {
     opacity: 1;
-    transform: translateY(0) scale(1);
+    transform: translateY(0) scale(var(--overlay-scale, 1));
   }
 }
 
 @keyframes popOut {
   0% {
     opacity: 1;
-    transform: translateY(0) scale(1);
+    transform: translateY(0) scale(var(--overlay-scale, 1));
   }
   100% {
     opacity: 0;
-    transform: translateY(30px) scale(0.85);
+    transform: translateY(30px) scale(calc(var(--overlay-scale, 1) * 0.85));
   }
 }
 

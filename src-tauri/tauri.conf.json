@@ -10,13 +10,15 @@
     "frontendDist": "../src/overlay"
   },
   "app": {
+    "withGlobalTauri": true,
     "windows": [
       {
-        "title": "BordelBoxEasy Overlay",
+        "title": "",
         "width": 1920,
         "height": 1080,
         "resizable": false,
-        "fullscreen": true,
+        "fullscreen": false,
+        "maximized": true,
         "transparent": true,
         "decorations": false,
         "alwaysOnTop": true,

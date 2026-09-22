@@ -341,6 +341,15 @@
 
       <div class="btn-group">
         <div class="volume-slider-box">
+          <span style="font-size: 1.1rem;">📏</span>
+          <select id="scale-select" style="padding: 6px 10px; font-size: 0.82rem; border-radius: 10px;">
+            <option value="0.75">Taille: 75%</option>
+            <option value="1.0" selected>Taille: 100%</option>
+            <option value="1.25">Taille: 125%</option>
+            <option value="1.5">Taille: 150%</option>
+          </select>
+        </div>
+        <div class="volume-slider-box">
           <span style="font-size: 1.1rem;">🔊</span>
           <input type="range" id="volume-slider" min="0" max="1" step="0.05" value="0.8">
           <span id="volume-label" style="font-size: 0.85rem; width: 35px;">80%</span>
@@ -475,6 +484,16 @@
       const vol = e.target.value;
       volumeLabel.textContent = Math.round(vol * 100) + '%';
       socket.emit('change_volume', vol);
+    });
+
+    // Échelle / Taille de l'overlay
+    const scaleSelect = document.getElementById('scale-select');
+    scaleSelect.addEventListener('change', (e) => {
+      const scale = parseFloat(e.target.value);
+      socket.emit('change_scale', scale);
+    });
+    socket.on('scale_updated', (scale) => {
+      scaleSelect.value = scale.toString();
     });
 
     // Actions Skip & Clear

@@ -90,6 +90,11 @@ io.on('connection', (socket) => {
     io.emit('volume_updated', vol);
   });
 
+  // Contrôle de la taille de l'overlay (LiveChat)
+  socket.on('change_scale', (scale) => {
+    io.emit('scale_updated', scale);
+  });
+
   // Déclencher un média de test depuis le panel
   socket.on('trigger_test', (payload) => {
     console.log('[Test Panel] Événement de test déclenché :', payload.type);

@@ -235,7 +235,47 @@ socket.on('volume_updated', (newVol) => {
   playerVideo.volume = currentVolume;
   playerAudio.volume = currentVolume;
   console.log('[Overlay] Volume ajusté à :', Math.round(currentVolume * 100) + '%');
+// Gestion de la taille / échelle de l'overlay (LiveChat)
+function setOverlayScale(scale) {
+  const s = parseFloat(scale) || 1.0;
+  document.documentElement.style.setProperty('--overlay-scale', s.toString());
+  localStorage.setItem('bordelbox_scale', s.toString());
+  console.log('[Overlay] Taille ajustée à :', Math.round(s * 100) + '%');
+}
+
+// Appliquer la taille sauvegardée au démarrage
+const savedScale = localStorage.getItem('bordelbox_scale') || '1.0';
+setOverlayScale(savedScale);
+
+// Synchronisation de la taille via Socket.io
+socket.on('scale_updated', (scale) => {
+  setOverlayScale(scale);
 });
+
+// Écoute des événements émis par le menu System Tray de Tauri (clic droit)
+function initTauriTrayListeners() {
+  if (window.__TAURI__ && window.__TAURI__.event) {
+    window.__TAURI__.event.listen('set_overlay_scale', (event) => {
+      console.log('[Tauri Tray] Changement de taille demandé :', event.payload);
+      setOverlayScale(event.payload);
+      socket.emit('change_scale', event.payload);
+    });
+
+    window.__TAURI__.event.listen('trigger_test_overlay', () => {
+      socket.emit('trigger_test', {
+        type: 'text',
+        message: 'Test depuis le menu Tray (clic droit) réussi ! 🎯',
+        tts: true,
+        author: { name: 'BordelBox Tray', avatar: 'https://cdn.discordapp.com/embed/avatars/0.png' }
+      });
+    });
+  } else {
+    // Si l'objet Tauri n'est pas encore injecté, on réessaie après un court délai
+    setTimeout(initTauriTrayListeners, 500);
+  }
+}
+
+initTauriTrayListeners();
 
 // Charger les voix Web Speech dès que le navigateur est prêt
 if ('speechSynthesis' in window) {

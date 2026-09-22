@@ -2,7 +2,7 @@
 name = "bordelbox-easy"
 version = "1.0.0"
 description = "Overlay de bureau léger et transparent pour BordelBoxEasy"
-authors = ["Maxence"]
+authors = ["Red"]
 edition = "2021"
 
 [build-dependencies]
