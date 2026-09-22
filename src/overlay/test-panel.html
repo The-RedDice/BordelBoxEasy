@@ -323,11 +323,31 @@
           <span class="pill-dot"></span>
           <span>Serveur : En ligne</span>
         </div>
+        <div class="pill" id="online-overlays-pill" title="Personnes connectées à l'overlay">
+          <span class="pill-dot" id="online-overlays-dot" style="background: var(--text-muted); box-shadow: none;"></span>
+          <span id="online-overlays-count">0 connecté à l'overlay</span>
+        </div>
         <a href="/overlay" target="_blank" class="btn btn-secondary" style="padding: 6px 14px; font-size: 0.82rem;">
           🖥️ Ouvrir l'Overlay dans un onglet
         </a>
       </div>
     </header>
+
+    <!-- Carte Personnes Connectées à l'Overlay -->
+    <div class="live-status-card" style="border-color: rgba(87, 242, 135, 0.25);">
+      <div class="live-info">
+        <span class="live-badge" style="background: rgba(87, 242, 135, 0.15); color: var(--success); border-color: rgba(87, 242, 135, 0.4);">OVERLAY EN DIRECT</span>
+        <div>
+          <strong id="online-users-title">0 personne connectée à l'overlay</strong>
+          <div id="online-users-details" style="font-size: 0.82rem; color: var(--text-muted);">
+            Le statut Discord du bot et la commande <code>/online</code> se mettent à jour automatiquement en temps réel.
+          </div>
+        </div>
+      </div>
+      <div id="online-users-tags" style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center;">
+        <span style="font-size: 0.82rem; color: var(--text-muted);">Aucun joueur connecté</span>
+      </div>
+    </div>
 
     <!-- Barre d'état en direct -->
     <div class="live-status-card">
@@ -499,6 +519,48 @@
     });
     socket.on('scale_updated', (scale) => {
       scaleSelect.value = scale.toString();
+    });
+
+    // Mise à jour en temps réel des utilisateurs connectés à l'overlay
+    socket.on('online_count_updated', (data) => {
+      const count = data.count || 0;
+      const users = data.users || [];
+
+      // Pilule d'en-tête
+      const pillCount = document.getElementById('online-overlays-count');
+      const pillDot = document.getElementById('online-overlays-dot');
+      if (pillCount) {
+        pillCount.textContent = count === 0
+          ? "0 connecté à l'overlay"
+          : `${count} connecté${count > 1 ? 's' : ''} à l'overlay`;
+      }
+      if (pillDot) {
+        pillDot.style.background = count > 0 ? 'var(--success)' : 'var(--text-muted)';
+        pillDot.style.boxShadow = count > 0 ? '0 0 8px var(--success)' : 'none';
+      }
+
+      // Carte de statut en direct
+      const usersTitle = document.getElementById('online-users-title');
+      const usersTags = document.getElementById('online-users-tags');
+
+      if (usersTitle) {
+        usersTitle.textContent = count === 0
+          ? "Aucun joueur connecté à l'overlay"
+          : `${count} joueur${count > 1 ? 's' : ''} connecté${count > 1 ? 's' : ''} en direct`;
+      }
+
+      if (usersTags) {
+        if (count === 0) {
+          usersTags.innerHTML = '<span style="font-size: 0.82rem; color: var(--text-muted);">Lancez l\'app de bureau ou ouvrez <code>/overlay</code></span>';
+        } else {
+          usersTags.innerHTML = users.map(u => `
+            <span style="display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; background: rgba(87, 242, 135, 0.12); border: 1px solid rgba(87, 242, 135, 0.3); border-radius: 12px; font-size: 0.82rem; font-weight: 600; color: #57f287;">
+              <span style="width: 6px; height: 6px; border-radius: 50%; background: #57f287;"></span>
+              ${u.username} <span style="font-size: 0.72rem; opacity: 0.75; font-weight: normal;">(${u.platform})</span>
+            </span>
+          `).join('');
+        }
+      }
     });
 
     // Actions Skip & Clear

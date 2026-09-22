@@ -4,7 +4,7 @@
 use tauri::{
     menu::{Menu, MenuItem, PredefinedMenuItem, Submenu},
     tray::TrayIconBuilder,
-    Emitter, Manager,
+    Emitter, Listener, Manager,
 };
 use tauri_plugin_global_shortcut::{GlobalShortcutExt, ShortcutState};
 
@@ -27,6 +27,17 @@ fn main() {
                 let _ = main_window.set_ignore_cursor_events(true);
                 let _ = main_window.set_decorations(false);
                 let _ = main_window.set_shadow(false);
+
+                // Écoute des événements du frontend pour restaurer ou suspendre temporairement le click-through
+                let win_restore = main_window.clone();
+                let _ = app.listen("restore_clickthrough", move |_| {
+                    let _ = win_restore.set_ignore_cursor_events(true);
+                });
+
+                let win_disable = main_window.clone();
+                let _ = app.listen("disable_clickthrough", move |_| {
+                    let _ = win_disable.set_ignore_cursor_events(false);
+                });
             }
 
             // Enregistrement des raccourcis clavier globaux pour activer/désactiver l'overlay en jeu
@@ -48,6 +59,7 @@ fn main() {
 
             // 2. Options supplémentaires
             let toggle_item = MenuItem::with_id(app, "toggle_overlay", "👁️ Activer/Désactiver l'overlay (F9)", true, None::<&str>)?;
+            let username_item = MenuItem::with_id(app, "change_username", "👤 Choisir mon pseudo...", true, None::<&str>)?;
             let server_item = MenuItem::with_id(app, "config_server", "🌐 Configurer le serveur...", true, None::<&str>)?;
             let test_item = MenuItem::with_id(app, "test_card", "🎯 Tester une carte", true, None::<&str>)?;
             let reload_item = MenuItem::with_id(app, "reload", "🔄 Recharger l'overlay", true, None::<&str>)?;
@@ -57,7 +69,7 @@ fn main() {
             // 3. Construction du menu contextuel (clic droit)
             let menu = Menu::with_items(
                 app,
-                &[&toggle_item, &size_submenu, &server_item, &test_item, &reload_item, &sep, &quit_item],
+                &[&toggle_item, &size_submenu, &username_item, &server_item, &test_item, &reload_item, &sep, &quit_item],
             )?;
 
             // 4. Initialisation de l'icône dans la barre des tâches (System Tray)
@@ -74,6 +86,13 @@ fn main() {
                                 let _ = window.eval("if (window.toggleOverlay) window.toggleOverlay();");
                             }
                             let _ = app.emit("toggle_overlay", ());
+                        }
+                        "change_username" => {
+                            if let Some(window) = app.get_webview_window("main") {
+                                let _ = window.set_ignore_cursor_events(false);
+                                let _ = window.eval("if (window.promptUsername) window.promptUsername();");
+                            }
+                            let _ = app.emit("change_username", ());
                         }
                         "scale_75" => {
                             if let Some(window) = app.get_webview_window("main") {

@@ -5,6 +5,7 @@ const {
   Routes,
   SlashCommandBuilder,
   EmbedBuilder,
+  ActivityType,
 } = require('discord.js');
 
 /**
@@ -39,8 +40,9 @@ function detectMediaType(url, contentType = '') {
  * Initialise et démarre le bot Discord
  * @param {import('./queue')} queue
  * @param {Object} config
+ * @param {Function} [getConnectedOverlays]
  */
-function initBot(queue, config) {
+function initBot(queue, config, getConnectedOverlays) {
   const token = config.token || process.env.DISCORD_TOKEN;
   const clientId = config.clientId || process.env.DISCORD_CLIENT_ID;
   const guildId = config.guildId || process.env.DISCORD_GUILD_ID;
@@ -106,13 +108,36 @@ function initBot(queue, config) {
           .setDescription('Activer la lecture vocale par synthèse (TTS) (Oui par défaut)')
           .setRequired(false)
       ),
+
+    // 3. Commande /online
+    new SlashCommandBuilder()
+      .setName('online')
+      .setDescription('Affiche le nombre et les pseudos des personnes connectées à l\'overlay'),
   ];
+
+  /**
+   * Met à jour la bio / statut d'activité du bot en temps réel
+   * @param {number} count
+   */
+  function updatePresence(count = 0) {
+    if (!client || !client.user) return;
+    const text = count === 0
+      ? "📺 Personne sur l'overlay"
+      : count === 1
+      ? "📺 1 connecté à l'overlay"
+      : `📺 ${count} connectés à l'overlay`;
+
+    client.user.setPresence({
+      activities: [{ name: text, type: ActivityType.Watching }],
+      status: count > 0 ? 'online' : 'idle',
+    });
+  }
 
   // Enregistrement des commandes auprès de l'API Discord
   async function registerSlashCommands() {
     try {
       const rest = new REST({ version: '10' }).setToken(token);
-      console.log('[Discord Bot] Enregistrement des commandes Slash (/media, /texte)...');
+      console.log('[Discord Bot] Enregistrement des commandes Slash (/media, /texte, /online)...');
 
       if (guildId) {
         // Enregistrement instantané pour un serveur spécifique
@@ -136,6 +161,8 @@ function initBot(queue, config) {
 
   client.once('ready', async () => {
     console.log(`✅ [Discord Bot] Connecté en tant que ${client.user.tag}`);
+    const initialCount = typeof getConnectedOverlays === 'function' ? getConnectedOverlays().length : 0;
+    updatePresence(initialCount);
     if (clientId && clientId !== 'TON_CLIENT_ID_ICI') {
       await registerSlashCommands();
     } else {
@@ -220,6 +247,26 @@ function initBot(queue, config) {
         ephemeral: false,
       });
     }
+
+    // Commande /online
+    if (commandName === 'online') {
+      const overlays = typeof getConnectedOverlays === 'function' ? getConnectedOverlays() : [];
+      const count = overlays.length;
+
+      const embed = new EmbedBuilder()
+        .setColor(count > 0 ? 0x57f287 : 0xed4245)
+        .setTitle('📺 Joueurs connectés à l\'Overlay')
+        .setTimestamp();
+
+      if (count === 0) {
+        embed.setDescription('🔴 **Aucun joueur n\'est actuellement connecté à l\'overlay.**\nLancez l\'application de bureau BordelBox ou ouvrez l\'overlay dans votre navigateur !');
+      } else {
+        const userList = overlays.map((o) => `• 🟢 **${o.username || 'Anonyme'}** *(${o.platform || 'Overlay'})*`).join('\n');
+        embed.setDescription(`**${count} joueur${count > 1 ? 's' : ''} connecté${count > 1 ? 's' : ''} en direct :**\n\n${userList}`);
+      }
+
+      return interaction.reply({ embeds: [embed] });
+    }
   });
 
   // Connexion
@@ -227,7 +274,10 @@ function initBot(queue, config) {
     console.error('❌ [Discord Bot] Échec de la connexion à Discord :', err.message);
   });
 
-  return client;
+  return {
+    client,
+    updatePresence,
+  };
 }
 
 module.exports = { initBot, detectMediaType };

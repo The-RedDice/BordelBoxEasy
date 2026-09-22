@@ -56,6 +56,24 @@ app.post('/api/test', (req, res) => {
   res.json({ success: true, item });
 });
 
+// Suivi des clients connectés à l'overlay
+const connectedOverlays = new Map(); // socket.id -> { username, platform, connectedAt }
+
+function getConnectedOverlays() {
+  return Array.from(connectedOverlays.values());
+}
+
+let bot = null;
+
+function broadcastOverlayStatus() {
+  const count = connectedOverlays.size;
+  const users = getConnectedOverlays();
+  io.emit('online_count_updated', { count, users });
+  if (bot && typeof bot.updatePresence === 'function') {
+    bot.updatePresence(count);
+  }
+}
+
 // Initialisation de la file d'attente
 const queue = new MediaQueue(io, MAX_MEDIA_DURATION);
 
@@ -67,6 +85,38 @@ io.on('connection', (socket) => {
   socket.emit('queue_updated', {
     queueLength: queue.queue.length,
     current: queue.currentItem,
+  });
+
+  socket.emit('online_count_updated', {
+    count: connectedOverlays.size,
+    users: getConnectedOverlays(),
+  });
+
+  // Enregistrement d'un client overlay avec son pseudo choisi
+  socket.on('register_overlay', (data) => {
+    const username = (data?.username || '').trim() || `Pote_${socket.id.substring(0, 4)}`;
+    const platform = (data?.platform || 'Overlay').trim();
+    connectedOverlays.set(socket.id, {
+      username,
+      platform,
+      connectedAt: Date.now(),
+    });
+    console.log(`[Overlay Online] +1 Connecté : ${username} [${platform}] (Total en direct: ${connectedOverlays.size})`);
+    broadcastOverlayStatus();
+  });
+
+  // Mise à jour dynamique du pseudo
+  socket.on('update_username', (data) => {
+    if (connectedOverlays.has(socket.id)) {
+      const user = connectedOverlays.get(socket.id);
+      const oldName = user.username;
+      const newName = (data?.username || '').trim();
+      if (newName) {
+        user.username = newName;
+        console.log(`[Overlay Online] Pseudo changé : ${oldName} -> ${newName}`);
+        broadcastOverlayStatus();
+      }
+    }
   });
 
   // Événement quand l'overlay a fini de jouer un média
@@ -105,16 +155,27 @@ io.on('connection', (socket) => {
   });
 
   socket.on('disconnect', () => {
-    console.log(`[Socket] Client déconnecté (${socket.id})`);
+    if (connectedOverlays.has(socket.id)) {
+      const user = connectedOverlays.get(socket.id);
+      connectedOverlays.delete(socket.id);
+      console.log(`[Overlay Online] -1 Déconnecté : ${user.username} (Total restant: ${connectedOverlays.size})`);
+      broadcastOverlayStatus();
+    } else {
+      console.log(`[Socket] Client déconnecté (${socket.id})`);
+    }
   });
 });
 
-// Initialisation du bot Discord
-initBot(queue, {
-  token: process.env.DISCORD_TOKEN,
-  clientId: process.env.DISCORD_CLIENT_ID,
-  guildId: process.env.DISCORD_GUILD_ID,
-});
+// Initialisation du bot Discord avec suivi des overlays en ligne
+bot = initBot(
+  queue,
+  {
+    token: process.env.DISCORD_TOKEN,
+    clientId: process.env.DISCORD_CLIENT_ID,
+    guildId: process.env.DISCORD_GUILD_ID,
+  },
+  getConnectedOverlays
+);
 
 const HOST = process.env.HOST || '0.0.0.0';
 

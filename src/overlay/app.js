@@ -22,6 +22,11 @@ const socket = io(SERVER_URL, {
 
 socket.on('connect', () => {
   console.log('✅ [Overlay] Connecté au serveur BordelBox avec succès ! (Socket ID:', socket.id, ')');
+  // Enregistre ce client comme overlay actif avec son pseudo
+  socket.emit('register_overlay', {
+    username: getSavedUsername(),
+    platform: isWebPage ? 'Web / OBS' : 'App Bureau',
+  });
 });
 
 socket.on('connect_error', (err) => {
@@ -77,6 +82,18 @@ playerVideo.volume = currentVolume;
 playerAudio.volume = currentVolume;
 
 /**
+ * Récupère le pseudo choisi pour cet overlay (ou en génère un aléatoire au premier lancement)
+ */
+function getSavedUsername() {
+  let name = localStorage.getItem('bordelbox_username');
+  if (!name || !name.trim()) {
+    name = 'Pote_' + Math.floor(100 + Math.random() * 900);
+    localStorage.setItem('bordelbox_username', name);
+  }
+  return name.trim();
+}
+
+/**
  * Met à jour l'indicateur discret de statut en haut à droite
  */
 function updateStatusIndicator() {
@@ -87,10 +104,13 @@ function updateStatusIndicator() {
     statusHideTimeout = null;
   }
 
+  const user = getSavedUsername();
+  statusIndicator.title = `Pseudo : ${user} (Cliquer pour changer • F9 pour masquer/afficher)`;
+
   if (isOverlayEnabled) {
     statusIndicator.classList.remove('disabled');
     statusIndicator.classList.add('active');
-    statusLabel.textContent = 'BORDELBOX';
+    statusLabel.textContent = user.toUpperCase();
   } else {
     statusIndicator.classList.remove('active');
     statusIndicator.classList.add('disabled');
@@ -565,18 +585,60 @@ function triggerTestCard() {
  * Configuration interactive de l'adresse du serveur BordelBox
  */
 function configureServerUrl() {
-  const current = localStorage.getItem('bordelbox_server_url') || 'http://localhost:3000';
-  const newUrl = prompt('Entrez l\'adresse IP ou le domaine de votre serveur Ubuntu\nExemple : http://192.168.1.50:3000 ou http://mon-vps.com:3000\n\nAdresse actuelle :', current);
-  if (newUrl && newUrl.trim() !== '') {
-    let formatted = newUrl.trim();
-    if (!formatted.startsWith('http://') && !formatted.startsWith('https://')) {
-      formatted = 'http://' + formatted;
-    }
-    formatted = formatted.replace(/\/+$/, '');
-    localStorage.setItem('bordelbox_server_url', formatted);
-    alert(`✅ Serveur configuré sur : ${formatted}\nL'overlay va maintenant redémarrer.`);
-    window.location.reload();
+  if (window.__TAURI__ && window.__TAURI__.event) {
+    window.__TAURI__.event.emit('disable_clickthrough', {});
   }
+  try {
+    const current = localStorage.getItem('bordelbox_server_url') || 'http://localhost:3000';
+    const newUrl = prompt('Entrez l\'adresse IP ou le domaine de votre serveur Ubuntu\nExemple : http://192.168.1.50:3000 ou http://mon-vps.com:3000\n\nAdresse actuelle :', current);
+    if (newUrl && newUrl.trim() !== '') {
+      let formatted = newUrl.trim();
+      if (!formatted.startsWith('http://') && !formatted.startsWith('https://')) {
+        formatted = 'http://' + formatted;
+      }
+      formatted = formatted.replace(/\/+$/, '');
+      localStorage.setItem('bordelbox_server_url', formatted);
+      alert(`✅ Serveur configuré sur : ${formatted}\nL'overlay va maintenant redémarrer.`);
+      window.location.reload();
+    }
+  } finally {
+    if (window.__TAURI__ && window.__TAURI__.event) {
+      window.__TAURI__.event.emit('restore_clickthrough', {});
+    }
+  }
+}
+
+/**
+ * Permet au joueur de choisir son pseudo d'overlay
+ */
+function promptUsername() {
+  if (window.__TAURI__ && window.__TAURI__.event) {
+    window.__TAURI__.event.emit('disable_clickthrough', {});
+  }
+  try {
+    const current = getSavedUsername();
+    const newName = prompt('Entrez votre pseudo pour l\'overlay :\n(Ce pseudo s\'affichera sur votre écran et sera visible par vos potes avec la commande Discord /online)\n\nPseudo actuel :', current);
+    if (newName && newName.trim() !== '') {
+      const cleanName = newName.trim().substring(0, 24);
+      localStorage.setItem('bordelbox_username', cleanName);
+      updateStatusIndicator();
+      if (socket && socket.connected) {
+        socket.emit('update_username', { username: cleanName });
+      }
+      alert(`✅ Votre pseudo pour l'overlay est désormais : ${cleanName}`);
+    }
+  } finally {
+    if (window.__TAURI__ && window.__TAURI__.event) {
+      window.__TAURI__.event.emit('restore_clickthrough', {});
+    }
+  }
+}
+
+// Rendre l'indicateur cliquable dans le navigateur pour changer facilement de pseudo
+if (statusIndicator) {
+  statusIndicator.addEventListener('click', () => {
+    promptUsername();
+  });
 }
 
 // Exposition sur l'objet window pour invocation directe depuis Tauri (eval) ou la console
@@ -585,6 +647,7 @@ window.setOverlayScale = setOverlayScale;
 window.triggerTestCard = triggerTestCard;
 window.configureServerUrl = configureServerUrl;
 window.toggleOverlay = toggleOverlay;
+window.promptUsername = promptUsername;
 
 // Raccourci clavier local (au cas où la fenêtre est ciblée ou dans le navigateur)
 window.addEventListener('keydown', (e) => {
@@ -611,6 +674,10 @@ function initTauriTrayListeners() {
 
     window.__TAURI__.event.listen('toggle_overlay', () => {
       toggleOverlay();
+    });
+
+    window.__TAURI__.event.listen('change_username', () => {
+      promptUsername();
     });
   } else {
     // Si l'objet Tauri n'est pas encore injecté, on réessaie après un court délai
