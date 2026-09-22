@@ -4,12 +4,13 @@
  */
 
 // Détection de l'adresse du serveur BordelBox
-// Si ouvert dans le navigateur sur http://localhost:3000/overlay, on utilise l'origine relative
-// Si ouvert dans l'application de bureau Tauri (tauri:// ou tauri.localhost), on se connecte explicitement à http://localhost:3000
-const isServerOrigin = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') && window.location.port === '3000';
-const SERVER_URL = isServerOrigin ? '' : 'http://localhost:3000';
+// 1. Si ouvert dans un navigateur classique (http://IP_SERVEUR:PORT/overlay), on utilise cette même origine
+// 2. Si ouvert dans l'application de bureau Tauri (tauri:// ou tauri.localhost), on utilise l'URL configurée ou http://localhost:3000 par défaut
+const isWebPage = window.location.protocol.startsWith('http') && !window.location.hostname.includes('tauri');
+const defaultDesktopServer = localStorage.getItem('bordelbox_server_url') || 'http://localhost:3000';
+const SERVER_URL = isWebPage ? window.location.origin : defaultDesktopServer;
 
-console.log('[Overlay] Connexion WebSocket vers :', SERVER_URL || window.location.origin);
+console.log('[Overlay] Connexion WebSocket vers :', SERVER_URL);
 
 const socket = io(SERVER_URL, {
   transports: ['websocket', 'polling'],
@@ -23,7 +24,7 @@ socket.on('connect', () => {
 });
 
 socket.on('connect_error', (err) => {
-  console.warn('⚠️ [Overlay] En attente de connexion au serveur (http://localhost:3000) :', err.message);
+  console.warn(`⚠️ [Overlay] En attente de connexion au serveur (${SERVER_URL}) :`, err.message);
 });
 
 socket.on('disconnect', (reason) => {
@@ -316,10 +317,29 @@ function triggerTestCard() {
   }
 }
 
+/**
+ * Configuration interactive de l'adresse du serveur BordelBox
+ */
+function configureServerUrl() {
+  const current = localStorage.getItem('bordelbox_server_url') || 'http://localhost:3000';
+  const newUrl = prompt('Entrez l\'adresse IP ou le domaine de votre serveur Ubuntu\nExemple : http://192.168.1.50:3000 ou http://mon-vps.com:3000\n\nAdresse actuelle :', current);
+  if (newUrl && newUrl.trim() !== '') {
+    let formatted = newUrl.trim();
+    if (!formatted.startsWith('http://') && !formatted.startsWith('https://')) {
+      formatted = 'http://' + formatted;
+    }
+    formatted = formatted.replace(/\/+$/, '');
+    localStorage.setItem('bordelbox_server_url', formatted);
+    alert(`✅ Serveur configuré sur : ${formatted}\nL'overlay va maintenant redémarrer.`);
+    window.location.reload();
+  }
+}
+
 // Exposition sur l'objet window pour invocation directe depuis Tauri (eval)
 window.displayMediaItem = displayMediaItem;
 window.setOverlayScale = setOverlayScale;
 window.triggerTestCard = triggerTestCard;
+window.configureServerUrl = configureServerUrl;
 
 // Écoute des événements émis par le menu System Tray de Tauri (clic droit)
 function initTauriTrayListeners() {

@@ -116,11 +116,14 @@ initBot(queue, {
   guildId: process.env.DISCORD_GUILD_ID,
 });
 
+const HOST = process.env.HOST || '0.0.0.0';
+
 // Démarrage du serveur
-server.listen(PORT, () => {
+server.listen(PORT, HOST, () => {
   console.log('====================================================');
   console.log('🎉 BORDELBOX EASY EST PRÊT !');
-  console.log(`📺 Overlay (Desktop / Browser) : http://localhost:${PORT}/overlay`);
-  console.log(`🎛️ Panneau de test & contrôle  : http://localhost:${PORT}/`);
+  console.log(`📺 Overlay (Navigateur / OBS) : http://localhost:${PORT}/overlay`);
+  console.log(`🎛️ Panneau de contrôle        : http://localhost:${PORT}/`);
+  console.log(`🌐 Écoute sur                 : ${HOST}:${PORT}`);
   console.log('====================================================\n');
 });

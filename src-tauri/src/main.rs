@@ -31,6 +31,7 @@ fn main() {
             )?;
 
             // 2. Options supplémentaires
+            let server_item = MenuItem::with_id(app, "config_server", "🌐 Configurer le serveur...", true, None::<&str>)?;
             let test_item = MenuItem::with_id(app, "test_card", "🎯 Tester une carte", true, None::<&str>)?;
             let reload_item = MenuItem::with_id(app, "reload", "🔄 Recharger l'overlay", true, None::<&str>)?;
             let sep = PredefinedMenuItem::separator(app)?;
@@ -39,7 +40,7 @@ fn main() {
             // 3. Construction du menu contextuel (clic droit)
             let menu = Menu::with_items(
                 app,
-                &[&size_submenu, &test_item, &reload_item, &sep, &quit_item],
+                &[&size_submenu, &server_item, &test_item, &reload_item, &sep, &quit_item],
             )?;
 
             // 4. Initialisation de l'icône dans la barre des tâches (System Tray)
@@ -74,6 +75,12 @@ fn main() {
                                 let _ = window.eval("if (window.setOverlayScale) window.setOverlayScale(1.5);");
                             }
                             let _ = app.emit("set_overlay_scale", 1.5);
+                        }
+                        "config_server" => {
+                            if let Some(window) = app.get_webview_window("main") {
+                                let _ = window.set_ignore_cursor_events(false);
+                                let _ = window.eval("if (window.configureServerUrl) window.configureServerUrl();");
+                            }
                         }
                         "test_card" => {
                             if let Some(window) = app.get_webview_window("main") {
