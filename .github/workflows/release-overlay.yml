@@ -1,0 +1,61 @@
+name: 'Release Overlay Automatique'
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'src/overlay/**'
+      - 'src-tauri/**'
+  workflow_dispatch:
+
+# Autorisation pour créer des releases et uploader les fichiers d'installation (.exe / .msi)
+permissions:
+  contents: write
+
+jobs:
+  release-overlay:
+    name: 'Compilation & Release Overlay Windows'
+    runs-on: windows-latest
+
+    steps:
+      - name: 📥 Récupération du code
+        uses: actions/checkout@v4
+
+      - name: 🟢 Configuration de Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: 🦀 Installation de la toolchain Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-pc-windows-msvc
+
+      - name: ⚡ Mise en cache des dépendances Rust
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: './src-tauri -> target'
+
+      - name: 📦 Installation des dépendances npm
+        run: npm install
+
+      - name: 🚀 Compilation Tauri & Publication de la Release
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tagName: overlay-v__VERSION__-b${{ github.run_number }}
+          releaseName: 'BordelBox Overlay v__VERSION__ (Build #${{ github.run_number }})'
+          releaseBody: |
+            ## 📺 BordelBox Overlay - Release Automatique (Build #${{ github.run_number }})
+
+            Cette version a été compilée automatiquement suite à une modification apportée à l'overlay.
+
+            ### 📦 Fichiers inclus :
+            Téléchargez l'installateur Windows (`.exe` ou `.msi`) disponible dans la section **Assets** ci-dessous pour lancer l'overlay sur votre écran de jeu.
+
+            *Commit : ${{ github.sha }}*
+          releaseDraft: false
+          prerelease: false
