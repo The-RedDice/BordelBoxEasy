@@ -52,18 +52,33 @@ fn main() {
                     match event.id().as_ref() {
                         "quit" => app.exit(0),
                         "scale_75" => {
+                            if let Some(window) = app.get_webview_window("main") {
+                                let _ = window.eval("if (window.setOverlayScale) window.setOverlayScale(0.75);");
+                            }
                             let _ = app.emit("set_overlay_scale", 0.75);
                         }
                         "scale_100" => {
+                            if let Some(window) = app.get_webview_window("main") {
+                                let _ = window.eval("if (window.setOverlayScale) window.setOverlayScale(1.0);");
+                            }
                             let _ = app.emit("set_overlay_scale", 1.0);
                         }
                         "scale_125" => {
+                            if let Some(window) = app.get_webview_window("main") {
+                                let _ = window.eval("if (window.setOverlayScale) window.setOverlayScale(1.25);");
+                            }
                             let _ = app.emit("set_overlay_scale", 1.25);
                         }
                         "scale_150" => {
+                            if let Some(window) = app.get_webview_window("main") {
+                                let _ = window.eval("if (window.setOverlayScale) window.setOverlayScale(1.5);");
+                            }
                             let _ = app.emit("set_overlay_scale", 1.5);
                         }
                         "test_card" => {
+                            if let Some(window) = app.get_webview_window("main") {
+                                let _ = window.eval("if (window.triggerTestCard) window.triggerTestCard();");
+                            }
                             let _ = app.emit("trigger_test_overlay", ());
                         }
                         "reload" => {

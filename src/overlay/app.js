@@ -3,7 +3,32 @@
  * Écoute les événements WebSocket et pilote l'affichage des médias et du texte
  */
 
-const socket = io();
+// Détection de l'adresse du serveur BordelBox
+// Si ouvert dans le navigateur sur http://localhost:3000/overlay, on utilise l'origine relative
+// Si ouvert dans l'application de bureau Tauri (tauri:// ou tauri.localhost), on se connecte explicitement à http://localhost:3000
+const isServerOrigin = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') && window.location.port === '3000';
+const SERVER_URL = isServerOrigin ? '' : 'http://localhost:3000';
+
+console.log('[Overlay] Connexion WebSocket vers :', SERVER_URL || window.location.origin);
+
+const socket = io(SERVER_URL, {
+  transports: ['websocket', 'polling'],
+  reconnection: true,
+  reconnectionDelay: 1000,
+  reconnectionAttempts: Infinity,
+});
+
+socket.on('connect', () => {
+  console.log('✅ [Overlay] Connecté au serveur BordelBox avec succès ! (Socket ID:', socket.id, ')');
+});
+
+socket.on('connect_error', (err) => {
+  console.warn('⚠️ [Overlay] En attente de connexion au serveur (http://localhost:3000) :', err.message);
+});
+
+socket.on('disconnect', (reason) => {
+  console.log('ℹ️ [Overlay] Déconnecté du serveur :', reason);
+});
 
 // Éléments du DOM
 const mediaCard = document.getElementById('media-card');
@@ -82,7 +107,9 @@ function finishCurrentMedia() {
     mediaCard.classList.add('hidden');
     mediaCard.classList.remove('hiding');
     hideAllMediaElements();
-    socket.emit('media_ended', { id });
+    if (socket && socket.connected) {
+      socket.emit('media_ended', { id });
+    }
   }, 350);
 }
 
@@ -137,9 +164,13 @@ function speakText(text, onEnded) {
   window.speechSynthesis.speak(utterance);
 }
 
-// Réception d'un nouveau média à jouer
-socket.on('media_play', (item) => {
-  console.log('[Overlay] Nouveau média reçu :', item);
+/**
+ * Affiche un élément multimédia ou texte sur l'overlay
+ * @param {Object} item
+ */
+function displayMediaItem(item) {
+  if (!item) return;
+  console.log('[Overlay] Affichage média :', item);
   hideAllMediaElements();
 
   currentItemId = item.id;
@@ -161,6 +192,7 @@ socket.on('media_play', (item) => {
   startProgressBar(maxDuration);
 
   // Sécurité générale de durée maximale
+  if (itemTimer) clearTimeout(itemTimer);
   itemTimer = setTimeout(() => {
     console.log('[Overlay] Durée maximale atteinte');
     finishCurrentMedia();
@@ -220,6 +252,11 @@ socket.on('media_play', (item) => {
       setTimeout(() => finishCurrentMedia(), 4000);
       break;
   }
+}
+
+// Réception d'un nouveau média à jouer depuis le serveur
+socket.on('media_play', (item) => {
+  displayMediaItem(item);
 });
 
 // Arrêt d'urgence ou skip
@@ -254,22 +291,49 @@ socket.on('scale_updated', (scale) => {
   setOverlayScale(scale);
 });
 
+/**
+ * Fonction de déclenchement de test accessible depuis Tauri tray et le panneau
+ */
+function triggerTestCard() {
+  console.log('[Overlay] Déclenchement de la carte de test');
+  if (socket && socket.connected) {
+    socket.emit('trigger_test', {
+      type: 'text',
+      message: 'Test depuis le menu Tray (clic droit) réussi ! 🎯',
+      tts: true,
+      author: { name: 'BordelBox Tray', avatar: 'https://cdn.discordapp.com/embed/avatars/0.png' }
+    });
+  } else {
+    // Si le serveur Socket.io n'est pas encore prêt, on affiche directement en local
+    displayMediaItem({
+      id: 'local_test_' + Date.now(),
+      type: 'text',
+      message: 'Test local direct réussi ! 🎯 (Serveur en cours de connexion)',
+      tts: false,
+      maxDuration: 6,
+      author: { name: 'BordelBox App', avatar: 'https://cdn.discordapp.com/embed/avatars/0.png' }
+    });
+  }
+}
+
+// Exposition sur l'objet window pour invocation directe depuis Tauri (eval)
+window.displayMediaItem = displayMediaItem;
+window.setOverlayScale = setOverlayScale;
+window.triggerTestCard = triggerTestCard;
+
 // Écoute des événements émis par le menu System Tray de Tauri (clic droit)
 function initTauriTrayListeners() {
   if (window.__TAURI__ && window.__TAURI__.event) {
     window.__TAURI__.event.listen('set_overlay_scale', (event) => {
       console.log('[Tauri Tray] Changement de taille demandé :', event.payload);
       setOverlayScale(event.payload);
-      socket.emit('change_scale', event.payload);
+      if (socket && socket.connected) {
+        socket.emit('change_scale', event.payload);
+      }
     });
 
     window.__TAURI__.event.listen('trigger_test_overlay', () => {
-      socket.emit('trigger_test', {
-        type: 'text',
-        message: 'Test depuis le menu Tray (clic droit) réussi ! 🎯',
-        tts: true,
-        author: { name: 'BordelBox Tray', avatar: 'https://cdn.discordapp.com/embed/avatars/0.png' }
-      });
+      triggerTestCard();
     });
   } else {
     // Si l'objet Tauri n'est pas encore injecté, on réessaie après un court délai
