@@ -26,7 +26,7 @@ const overlayDir = path.join(__dirname, '..', 'overlay');
 // Cache de la dernière version publiée sur GitHub
 let latestReleaseInfo = {
   version: packageJson.version,
-  tagName: 'overlay-v1.0.0-b10',
+  tagName: '',
   name: 'BordelBox Overlay',
   htmlUrl: 'https://github.com/The-RedDice/BordelBoxEasy/releases/latest',
   downloadUrl: 'https://github.com/The-RedDice/BordelBoxEasy/releases/latest',
@@ -37,7 +37,7 @@ let latestReleaseInfo = {
 function fetchLatestGithubRelease() {
   const options = {
     hostname: 'api.github.com',
-    path: '/repos/The-RedDice/BordelBoxEasy/releases/latest',
+    path: '/repos/The-RedDice/BordelBoxEasy/releases?per_page=10',
     method: 'GET',
     headers: {
       'User-Agent': 'BordelBoxEasy-Server',
@@ -51,19 +51,30 @@ function fetchLatestGithubRelease() {
     res.on('end', () => {
       if (res.statusCode === 200) {
         try {
-          const json = JSON.parse(data);
-          const exeAsset = (json.assets || []).find((a) => a.name.endsWith('.exe') || a.name.endsWith('.msi'));
-          latestReleaseInfo = {
-            version: json.tag_name ? json.tag_name.replace(/^overlay-v?|^v?/, '') : packageJson.version,
-            tagName: json.tag_name || 'overlay-v1.0.0-b10',
-            name: json.name || json.tag_name,
-            htmlUrl: json.html_url || 'https://github.com/The-RedDice/BordelBoxEasy/releases/latest',
-            downloadUrl: exeAsset ? exeAsset.browser_download_url : (json.html_url || 'https://github.com/The-RedDice/BordelBoxEasy/releases/latest'),
-            publishedAt: json.published_at,
-            checkedAt: Date.now(),
-          };
-          console.log(`[Version Check] Dernière release détectée sur GitHub : ${latestReleaseInfo.tagName}`);
-          io.emit('version_info', latestReleaseInfo);
+          const list = JSON.parse(data);
+          if (Array.isArray(list) && list.length > 0) {
+            // Filtrer les releases publiées valides et trier par numéro de build décroissant
+            const valid = list.filter((r) => !r.draft);
+            valid.sort((a, b) => {
+              const aBuild = parseInt((a.tag_name || '').match(/b(\d+)/i)?.[1] || 0, 10);
+              const bBuild = parseInt((b.tag_name || '').match(/b(\d+)/i)?.[1] || 0, 10);
+              return bBuild - aBuild;
+            });
+
+            const top = valid[0] || list[0];
+            const exeAsset = (top.assets || []).find((a) => a.name.endsWith('.exe') || a.name.endsWith('.msi'));
+            latestReleaseInfo = {
+              version: top.tag_name ? top.tag_name.replace(/^overlay-v?|^v?/, '') : packageJson.version,
+              tagName: top.tag_name || '',
+              name: top.name || top.tag_name,
+              htmlUrl: top.html_url || 'https://github.com/The-RedDice/BordelBoxEasy/releases/latest',
+              downloadUrl: exeAsset ? exeAsset.browser_download_url : (top.html_url || 'https://github.com/The-RedDice/BordelBoxEasy/releases/latest'),
+              publishedAt: top.published_at,
+              checkedAt: Date.now(),
+            };
+            console.log(`[Version Check] Dernière release GitHub détectée : ${latestReleaseInfo.tagName} (${latestReleaseInfo.name})`);
+            io.emit('version_info', latestReleaseInfo);
+          }
         } catch (e) {
           console.warn('[Version Check] Erreur de parsing JSON GitHub :', e.message);
         }

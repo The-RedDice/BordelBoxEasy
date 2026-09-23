@@ -41,6 +41,11 @@ jobs:
       - name: 📦 Installation des dépendances npm
         run: npm install
 
+      - name: 🏷️ Injection du numéro de build dans l'overlay
+        shell: pwsh
+        run: |
+          (Get-Content src/overlay/app.js) -replace '__OVERLAY_BUILD_TAG__', "overlay-v1.0.0-b${{ github.run_number }}" | Set-Content src/overlay/app.js
+
       - name: 🚀 Compilation Tauri & Publication de la Release
         uses: tauri-apps/tauri-action@v0
         env:

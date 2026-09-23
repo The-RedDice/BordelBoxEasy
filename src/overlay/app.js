@@ -697,21 +697,27 @@ if ('speechSynthesis' in window) {
 // ========================================================
 // Système de détection de mise à jour de l'overlay
 // ========================================================
-const CURRENT_OVERLAY_BUILD = 'overlay-v1.0.0-b10';
+// Ce tag est automatiquement remplacé par le numéro de build lors de la compilation GitHub Actions
+const CURRENT_OVERLAY_BUILD = '__OVERLAY_BUILD_TAG__';
 
 /**
  * Compare une version distante avec la version courante de l'overlay
  */
 function isNewerRelease(latestTag, currentTag) {
   if (!latestTag || !currentTag) return false;
+  // En mode développement ou overlay web direct (non packagé dans un .exe), pas de notification
+  if (currentTag === '__OVERLAY_BUILD_TAG__') return false;
   if (latestTag.toLowerCase() === currentTag.toLowerCase()) return false;
 
   const buildRegex = /b(\d+)/i;
   const lBuild = latestTag.match(buildRegex);
   const cBuild = currentTag.match(buildRegex);
 
+  // Si les deux versions ont un numéro de build (ex: b12 vs b11)
   if (lBuild && cBuild) {
-    return parseInt(lBuild[1], 10) > parseInt(cBuild[1], 10);
+    const lNum = parseInt(lBuild[1], 10);
+    const cNum = parseInt(cBuild[1], 10);
+    return lNum > cNum;
   }
 
   const clean = (str) => str.replace(/^overlay-v?|^v?/, '').trim();
@@ -744,7 +750,10 @@ function showUpdateNotification(releaseInfo) {
   }
 
   if (label) {
-    label.textContent = `Version ${latestTag} disponible (actuelle : ${CURRENT_OVERLAY_BUILD.replace('overlay-', '')})`;
+    const currentName = CURRENT_OVERLAY_BUILD === '__OVERLAY_BUILD_TAG__'
+      ? 'Locale'
+      : CURRENT_OVERLAY_BUILD.replace('overlay-', '');
+    label.textContent = `Version ${latestTag} disponible (actuelle : ${currentName})`;
   }
 
   const downloadUrl = releaseInfo.downloadUrl || releaseInfo.htmlUrl || 'https://github.com/The-RedDice/BordelBoxEasy/releases/latest';
@@ -783,6 +792,9 @@ function showUpdateNotification(releaseInfo) {
 
 // Écoute de l'événement version_info envoyé par le serveur
 socket.on('version_info', (releaseInfo) => {
+  // L'overlay ouvert dans un navigateur / OBS a toujours le code à jour du serveur
+  if (isWebPage) return;
+
   if (releaseInfo && isNewerRelease(releaseInfo.tagName, CURRENT_OVERLAY_BUILD)) {
     console.log(`[Overlay] 🚀 Mise à jour détectée : ${CURRENT_OVERLAY_BUILD} -> ${releaseInfo.tagName}`);
     showUpdateNotification(releaseInfo);
