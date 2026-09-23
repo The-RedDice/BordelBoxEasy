@@ -1,5 +1,23 @@
 const path = require('path');
-require('dotenv').config({ path: path.join(__dirname, '../../.env') });
+const fs = require('fs');
+
+// Recherche et chargement du fichier .env avec override: true pour écraser les caches PM2
+const potentialEnvPaths = [
+  path.resolve(__dirname, '../../.env'),
+  path.resolve(process.cwd(), '.env'),
+];
+
+let loadedEnvPath = null;
+for (const p of potentialEnvPaths) {
+  if (fs.existsSync(p)) {
+    require('dotenv').config({ path: p, override: true });
+    loadedEnvPath = p;
+    break;
+  }
+}
+if (!loadedEnvPath) {
+  require('dotenv').config({ override: true });
+}
 const http = require('http');
 const https = require('https');
 const express = require('express');
@@ -282,6 +300,7 @@ const HOST = process.env.HOST || '0.0.0.0';
 server.listen(PORT, HOST, () => {
   console.log('====================================================');
   console.log('🎉 BORDELBOX EASY EST PRÊT !');
+  console.log(`⚙️ Fichier .env               : ${loadedEnvPath || 'variables système'}`);
   console.log(`📺 Overlay (Navigateur / OBS) : http://localhost:${PORT}/overlay`);
   console.log(`🎛️ Panneau de contrôle        : http://localhost:${PORT}/`);
   console.log(`🌐 Écoute sur                 : ${HOST}:${PORT}`);
