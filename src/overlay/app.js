@@ -13,29 +13,53 @@ const SERVER_URL = isWebPage ? window.location.origin : defaultDesktopServer;
 
 console.log('[Overlay] Connexion WebSocket vers :', SERVER_URL);
 
+let isSocketConnected = false;
+
 const socket = io(SERVER_URL, {
+  query: { type: 'overlay' },
   transports: ['websocket', 'polling'],
   reconnection: true,
   reconnectionDelay: 1000,
   reconnectionAttempts: Infinity,
 });
 
+function registerThisOverlay() {
+  if (socket && socket.connected) {
+    socket.emit('register_overlay', {
+      username: getSavedUsername(),
+      platform: isWebPage ? 'Web / OBS' : 'App Bureau',
+    });
+  }
+}
+
 socket.on('connect', () => {
+  isSocketConnected = true;
   console.log('✅ [Overlay] Connecté au serveur BordelBox avec succès ! (Socket ID:', socket.id, ')');
-  // Enregistre ce client comme overlay actif avec son pseudo
-  socket.emit('register_overlay', {
-    username: getSavedUsername(),
-    platform: isWebPage ? 'Web / OBS' : 'App Bureau',
-  });
+  registerThisOverlay();
+  updateStatusIndicator();
+});
+
+socket.io.on('reconnect', () => {
+  isSocketConnected = true;
+  console.log('🔄 [Overlay] Reconnecté au serveur BordelBox');
+  registerThisOverlay();
+  updateStatusIndicator();
 });
 
 socket.on('connect_error', (err) => {
+  isSocketConnected = false;
   console.warn(`⚠️ [Overlay] En attente de connexion au serveur (${SERVER_URL}) :`, err.message);
+  updateStatusIndicator();
 });
 
 socket.on('disconnect', (reason) => {
+  isSocketConnected = false;
   console.log('ℹ️ [Overlay] Déconnecté du serveur :', reason);
+  updateStatusIndicator();
 });
+
+// Envoi périodique du statut toutes les 25 secondes pour maintenir la présence active
+setInterval(registerThisOverlay, 25000);
 
 // Éléments du DOM
 const mediaCard = document.getElementById('media-card');
@@ -94,6 +118,35 @@ function getSavedUsername() {
 }
 
 /**
+ * Polices d'écriture personnalisables pour les médias et textes
+ */
+const ALL_FONT_CLASSES = [
+  'font-impact',
+  'font-comic',
+  'font-pixel',
+  'font-cyber',
+  'font-marker',
+  'font-horror',
+  'font-cursive',
+];
+
+/**
+ * Applique une police personnalisée à un élément de texte
+ * @param {HTMLElement} element
+ * @param {string|null} fontName
+ */
+function applyCustomFont(element, fontName) {
+  if (!element) return;
+  element.classList.remove(...ALL_FONT_CLASSES);
+  if (fontName && fontName !== 'default' && typeof fontName === 'string') {
+    const className = `font-${fontName.trim().toLowerCase()}`;
+    if (ALL_FONT_CLASSES.includes(className)) {
+      element.classList.add(className);
+    }
+  }
+}
+
+/**
  * Met à jour l'indicateur discret de statut en haut à droite
  */
 function updateStatusIndicator() {
@@ -105,6 +158,18 @@ function updateStatusIndicator() {
   }
 
   const user = getSavedUsername();
+
+  if (!isSocketConnected) {
+    statusIndicator.classList.remove('active', 'disabled');
+    statusIndicator.classList.add('offline');
+    statusLabel.textContent = 'HORS LIGNE';
+    statusIndicator.title = isWebPage
+      ? 'Déconnecté du serveur BordelBox'
+      : `Déconnecté (${SERVER_URL}) - Cliquez pour configurer l'adresse IP de votre serveur Ubuntu`;
+    return;
+  }
+
+  statusIndicator.classList.remove('offline');
   statusIndicator.title = `Pseudo : ${user} (Cliquer pour changer • F9 pour masquer/afficher)`;
 
   if (isOverlayEnabled) {
@@ -299,9 +364,11 @@ function hideAllMediaElements() {
 
   textBox.classList.add('hidden');
   textContent.textContent = '';
+  applyCustomFont(textContent, null);
 
   captionBox.classList.add('hidden');
   captionText.textContent = '';
+  applyCustomFont(captionText, null);
 
   if ('speechSynthesis' in window) {
     window.speechSynthesis.cancel();
@@ -419,6 +486,7 @@ function displayMediaItem(item) {
   // Légende supplémentaire sous le média (si renseignée dans /media)
   if (item.text && item.text.trim()) {
     captionText.textContent = item.text.trim();
+    applyCustomFont(captionText, item.font);
     captionBox.classList.remove('hidden');
   }
 
@@ -498,6 +566,7 @@ function displayMediaItem(item) {
     case 'text':
       textBox.classList.remove('hidden');
       textContent.textContent = item.message || '';
+      applyCustomFont(textContent, item.font);
       mediaBadge.textContent = item.tts ? 'TEXTE + VOCAL' : 'TEXTE';
 
       if (item.tts) {
@@ -634,10 +703,14 @@ function promptUsername() {
   }
 }
 
-// Rendre l'indicateur cliquable dans le navigateur pour changer facilement de pseudo
+// Rendre l'indicateur cliquable : si hors ligne configure l'IP du serveur, sinon change le pseudo
 if (statusIndicator) {
   statusIndicator.addEventListener('click', () => {
-    promptUsername();
+    if (!isSocketConnected && !isWebPage) {
+      configureServerUrl();
+    } else {
+      promptUsername();
+    }
   });
 }
 

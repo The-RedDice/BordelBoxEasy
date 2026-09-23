@@ -1,8 +1,11 @@
+const path = require('path');
+
 module.exports = {
   apps: [
     {
       name: 'bordelbox',
       script: 'src/server/index.js',
+      cwd: __dirname,
       instances: 1,
       autorestart: true,
       watch: false,

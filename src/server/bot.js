@@ -90,6 +90,21 @@ function initBot(queue, config, getConnectedOverlays) {
           .setName('fond_vert')
           .setDescription('Supprimer automatiquement le fond vert du média (Chroma Key)')
           .setRequired(false)
+      )
+      .addStringOption((opt) =>
+        opt
+          .setName('police')
+          .setDescription('Style de la police d\'écriture du texte (Meme, Comic, Pixel, etc.)')
+          .setRequired(false)
+          .addChoices(
+            { name: '💥 Meme / Impact', value: 'impact' },
+            { name: '🤡 Comic Sans (Troll)', value: 'comic' },
+            { name: '👾 Pixel / Rétro 8-bit', value: 'pixel' },
+            { name: '⚡ Cyberpunk / Futuriste', value: 'cyber' },
+            { name: '🖋️ Graffiti / Marqueur', value: 'marker' },
+            { name: '🧛 Gothique / Horreur', value: 'horror' },
+            { name: '🎩 Cursive / Manuscrit', value: 'cursive' }
+          )
       ),
 
     // 2. Commande /texte
@@ -107,6 +122,21 @@ function initBot(queue, config, getConnectedOverlays) {
           .setName('tts')
           .setDescription('Activer la lecture vocale par synthèse (TTS) (Oui par défaut)')
           .setRequired(false)
+      )
+      .addStringOption((opt) =>
+        opt
+          .setName('police')
+          .setDescription('Style de la police d\'écriture du texte (Meme, Comic, Pixel, etc.)')
+          .setRequired(false)
+          .addChoices(
+            { name: '💥 Meme / Impact', value: 'impact' },
+            { name: '🤡 Comic Sans (Troll)', value: 'comic' },
+            { name: '👾 Pixel / Rétro 8-bit', value: 'pixel' },
+            { name: '⚡ Cyberpunk / Futuriste', value: 'cyber' },
+            { name: '🖋️ Graffiti / Marqueur', value: 'marker' },
+            { name: '🧛 Gothique / Horreur', value: 'horror' },
+            { name: '🎩 Cursive / Manuscrit', value: 'cursive' }
+          )
       ),
 
     // 3. Commande /online
@@ -192,6 +222,7 @@ function initBot(queue, config, getConnectedOverlays) {
       const urlOption = interaction.options.getString('url');
       const textOption = interaction.options.getString('texte') || '';
       const fondVert = interaction.options.getBoolean('fond_vert') || false;
+      const fontOption = interaction.options.getString('police') || 'default';
 
       if (!fileAttachment && !urlOption) {
         return interaction.reply({
@@ -216,6 +247,7 @@ function initBot(queue, config, getConnectedOverlays) {
         url: mediaUrl,
         text: textOption,
         chromakey: fondVert,
+        font: fontOption,
         author,
         duration: parseInt(process.env.MAX_MEDIA_DURATION, 10) || 20,
       });
@@ -223,6 +255,7 @@ function initBot(queue, config, getConnectedOverlays) {
       const details = [];
       if (textOption) details.push('avec texte');
       if (fondVert) details.push('🟢 fond vert retiré');
+      if (fontOption && fontOption !== 'default') details.push(`police: ${fontOption}`);
       const detailStr = details.length > 0 ? ` (${details.join(' • ')})` : '';
 
       return interaction.reply({
@@ -235,6 +268,7 @@ function initBot(queue, config, getConnectedOverlays) {
     if (commandName === 'texte') {
       const message = interaction.options.getString('message');
       const tts = interaction.options.getBoolean('tts') !== false; // true par défaut
+      const fontOption = interaction.options.getString('police') || 'default';
 
       // Estimation de la durée d'affichage selon la longueur du message (min 6s, max 15s)
       const duration = Math.min(Math.max(6, Math.ceil(message.length / 10) + 3), 15);
@@ -243,12 +277,18 @@ function initBot(queue, config, getConnectedOverlays) {
         type: 'text',
         message,
         tts,
+        font: fontOption,
         author,
         duration,
       });
 
+      const details = [];
+      if (tts) details.push('🔊 TTS');
+      if (fontOption && fontOption !== 'default') details.push(`police: ${fontOption}`);
+      const detailStr = details.length > 0 ? ` (${details.join(' • ')})` : '';
+
       return interaction.reply({
-        content: `💬 Message envoyé à l'écran ! ${tts ? '🔊 (avec synthèse vocale)' : ''}`,
+        content: `💬 Message envoyé à l'écran !${detailStr}`,
         ephemeral: false,
       });
     }

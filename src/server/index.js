@@ -1,5 +1,5 @@
-require('dotenv').config();
 const path = require('path');
+require('dotenv').config({ path: path.join(__dirname, '../../.env') });
 const http = require('http');
 const https = require('https');
 const express = require('express');
@@ -174,16 +174,33 @@ io.on('connection', (socket) => {
 
   socket.emit('version_info', latestReleaseInfo);
 
+  // Auto-détection immédiate si le client se connecte depuis /overlay ou via Tauri
+  const referer = socket.handshake?.headers?.referer || '';
+  const queryType = socket.handshake?.query?.type;
+  const isOverlayClient = queryType === 'overlay' || referer.includes('/overlay') || referer.includes('tauri');
+
+  if (isOverlayClient && !connectedOverlays.has(socket.id)) {
+    const defaultName = `Pote_${socket.id.substring(0, 4)}`;
+    const defaultPlatform = referer.includes('tauri') || queryType === 'tauri' ? 'App Bureau' : 'Web / OBS';
+    connectedOverlays.set(socket.id, {
+      username: defaultName,
+      platform: defaultPlatform,
+      connectedAt: Date.now(),
+    });
+    console.log(`[Overlay Online] Auto-détection overlay : ${defaultName} [${defaultPlatform}] (Total en direct: ${connectedOverlays.size})`);
+    broadcastOverlayStatus();
+  }
+
   // Enregistrement d'un client overlay avec son pseudo choisi
   socket.on('register_overlay', (data) => {
     const username = (data?.username || '').trim() || `Pote_${socket.id.substring(0, 4)}`;
-    const platform = (data?.platform || 'Overlay').trim();
+    const platform = (data?.platform || (referer.includes('tauri') ? 'App Bureau' : 'Overlay')).trim();
     connectedOverlays.set(socket.id, {
       username,
       platform,
       connectedAt: Date.now(),
     });
-    console.log(`[Overlay Online] +1 Connecté : ${username} [${platform}] (Total en direct: ${connectedOverlays.size})`);
+    console.log(`[Overlay Online] Pseudo enregistré : ${username} [${platform}] (Total en direct: ${connectedOverlays.size})`);
     broadcastOverlayStatus();
   });
 
