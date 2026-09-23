@@ -113,6 +113,11 @@ function initBot(queue, config, getConnectedOverlays) {
     new SlashCommandBuilder()
       .setName('online')
       .setDescription('Affiche le nombre et les pseudos des personnes connectées à l\'overlay'),
+
+    // 4. Commande /download
+    new SlashCommandBuilder()
+      .setName('download')
+      .setDescription('Donne le lien pour télécharger l\'application overlay BordelBox (Windows)'),
   ];
 
   /**
@@ -137,7 +142,7 @@ function initBot(queue, config, getConnectedOverlays) {
   async function registerSlashCommands() {
     try {
       const rest = new REST({ version: '10' }).setToken(token);
-      console.log('[Discord Bot] Enregistrement des commandes Slash (/media, /texte, /online)...');
+      console.log('[Discord Bot] Enregistrement des commandes Slash (/media, /texte, /online, /download)...');
 
       if (guildId) {
         // Enregistrement instantané pour un serveur spécifique
@@ -266,6 +271,38 @@ function initBot(queue, config, getConnectedOverlays) {
       }
 
       return interaction.reply({ embeds: [embed] });
+    }
+
+    // Commande /download
+    if (commandName === 'download') {
+      const downloadUrl = 'https://github.com/The-RedDice/BordelBoxEasy/releases/latest';
+      const allReleasesUrl = 'https://github.com/The-RedDice/BordelBoxEasy/releases';
+
+      const embed = new EmbedBuilder()
+        .setColor(0x5865f2)
+        .setTitle('📥 Télécharger l\'Overlay BordelBox')
+        .setDescription(
+          "Installe l'application de bureau pour afficher les médias et messages directement sur ton écran en jeu !\n\n" +
+          `🚀 **[Clique ici pour télécharger le dernier installeur Windows (.exe)](${downloadUrl})**\n\n` +
+          `📂 **[Consulter toutes les versions sur GitHub](${allReleasesUrl})**`
+        )
+        .addFields(
+          {
+            name: '✨ Fonctionnalités en jeu',
+            value: '• **100% transparent & passe-clic** : tes clics de souris traversent l\'overlay pour ne jamais gêner tes tirs en jeu.\n• **Touche F9** : masque ou réactive l\'overlay à tout moment.\n• **Personnalisation** : clic droit sur l\'icône en barre des tâches pour changer de pseudo ou régler la taille.',
+          },
+          {
+            name: '🌐 Overlay Web / OBS',
+            value: 'Tu peux aussi ouvrir l\'overlay dans un navigateur ou comme source de navigateur OBS via `/overlay`.',
+          }
+        )
+        .setFooter({ text: 'BordelBoxEasy • Visible uniquement par vous' })
+        .setTimestamp();
+
+      return interaction.reply({
+        embeds: [embed],
+        ephemeral: true,
+      });
     }
   });
 
