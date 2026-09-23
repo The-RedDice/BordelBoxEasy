@@ -1,10 +1,12 @@
 require('dotenv').config();
 const path = require('path');
 const http = require('http');
+const https = require('https');
 const express = require('express');
 const { Server } = require('socket.io');
 const MediaQueue = require('./queue');
 const { initBot } = require('./bot');
+const packageJson = require('../../package.json');
 
 const app = express();
 const server = http.createServer(app);
@@ -21,6 +23,66 @@ const MAX_MEDIA_DURATION = parseInt(process.env.MAX_MEDIA_DURATION, 10) || 20;
 // Dossier public pour l'overlay et le panneau de contrôle
 const overlayDir = path.join(__dirname, '..', 'overlay');
 
+// Cache de la dernière version publiée sur GitHub
+let latestReleaseInfo = {
+  version: packageJson.version,
+  tagName: 'overlay-v1.0.0-b10',
+  name: 'BordelBox Overlay',
+  htmlUrl: 'https://github.com/The-RedDice/BordelBoxEasy/releases/latest',
+  downloadUrl: 'https://github.com/The-RedDice/BordelBoxEasy/releases/latest',
+  publishedAt: null,
+  checkedAt: 0,
+};
+
+function fetchLatestGithubRelease() {
+  const options = {
+    hostname: 'api.github.com',
+    path: '/repos/The-RedDice/BordelBoxEasy/releases/latest',
+    method: 'GET',
+    headers: {
+      'User-Agent': 'BordelBoxEasy-Server',
+      'Accept': 'application/vnd.github.v3+json',
+    },
+  };
+
+  const req = https.request(options, (res) => {
+    let data = '';
+    res.on('data', (chunk) => { data += chunk; });
+    res.on('end', () => {
+      if (res.statusCode === 200) {
+        try {
+          const json = JSON.parse(data);
+          const exeAsset = (json.assets || []).find((a) => a.name.endsWith('.exe') || a.name.endsWith('.msi'));
+          latestReleaseInfo = {
+            version: json.tag_name ? json.tag_name.replace(/^overlay-v?|^v?/, '') : packageJson.version,
+            tagName: json.tag_name || 'overlay-v1.0.0-b10',
+            name: json.name || json.tag_name,
+            htmlUrl: json.html_url || 'https://github.com/The-RedDice/BordelBoxEasy/releases/latest',
+            downloadUrl: exeAsset ? exeAsset.browser_download_url : (json.html_url || 'https://github.com/The-RedDice/BordelBoxEasy/releases/latest'),
+            publishedAt: json.published_at,
+            checkedAt: Date.now(),
+          };
+          console.log(`[Version Check] Dernière release détectée sur GitHub : ${latestReleaseInfo.tagName}`);
+          io.emit('version_info', latestReleaseInfo);
+        } catch (e) {
+          console.warn('[Version Check] Erreur de parsing JSON GitHub :', e.message);
+        }
+      }
+    });
+  });
+
+  req.on('error', (err) => {
+    console.warn('[Version Check] Impossible de contacter GitHub API :', err.message);
+  });
+
+  req.setTimeout(8000, () => req.destroy());
+  req.end();
+}
+
+// Vérifie dès le démarrage puis toutes les 20 minutes
+fetchLatestGithubRelease();
+setInterval(fetchLatestGithubRelease, 20 * 60 * 1000);
+
 // Routes principales
 app.get('/', (req, res) => {
   res.sendFile(path.join(overlayDir, 'test-panel.html'));
@@ -36,6 +98,13 @@ app.use(express.json());
 // API HTTP pour récupérer le statut ou envoyer des événements
 app.get('/api/status', (req, res) => {
   res.json(queue.getStatus());
+});
+
+app.get('/api/version', (req, res) => {
+  res.json({
+    serverVersion: packageJson.version,
+    latestRelease: latestReleaseInfo,
+  });
 });
 
 app.post('/api/skip', (req, res) => {
@@ -91,6 +160,8 @@ io.on('connection', (socket) => {
     count: connectedOverlays.size,
     users: getConnectedOverlays(),
   });
+
+  socket.emit('version_info', latestReleaseInfo);
 
   // Enregistrement d'un client overlay avec son pseudo choisi
   socket.on('register_overlay', (data) => {

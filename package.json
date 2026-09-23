@@ -6,7 +6,11 @@
   "scripts": {
     "start": "node src/server/index.js",
     "dev": "node --watch src/server/index.js",
-    "tauri": "tauri"
+    "tauri": "tauri",
+    "pm2": "pm2 start ecosystem.config.js",
+    "pm2:restart": "pm2 restart bordelbox",
+    "pm2:logs": "pm2 logs bordelbox",
+    "pm2:stop": "pm2 stop bordelbox"
   },
   "keywords": [
     "overlay",

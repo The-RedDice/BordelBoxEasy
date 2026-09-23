@@ -566,6 +566,16 @@
       }
     });
 
+    // Information sur la dernière version disponible
+    socket.on('version_info', (releaseInfo) => {
+      if (!releaseInfo) return;
+      const downloadBtn = document.querySelector('a[href*="releases/latest"]');
+      if (downloadBtn && releaseInfo.tagName) {
+        downloadBtn.title = `Dernière version : ${releaseInfo.tagName}`;
+        downloadBtn.innerHTML = `📥 Télécharger (${releaseInfo.tagName})`;
+      }
+    });
+
     // Actions Skip & Clear
     btnSkip.addEventListener('click', () => socket.emit('skip'));
     btnClear.addEventListener('click', () => socket.emit('clear'));

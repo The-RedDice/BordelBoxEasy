@@ -393,3 +393,118 @@ body.overlay-body {
   0% { transform: scaleY(0.3); }
   100% { transform: scaleY(1); }
 }
+
+/* Bannière discrète de notification de mise à jour */
+.update-notification {
+  position: fixed;
+  top: 18px;
+  left: 22px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 16px;
+  background: rgba(18, 22, 36, 0.92);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(88, 101, 242, 0.45);
+  border-radius: 16px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6), 0 0 20px rgba(88, 101, 242, 0.25);
+  color: #ffffff;
+  font-family: 'Outfit', sans-serif;
+  user-select: none;
+  pointer-events: auto;
+  z-index: 10000;
+  animation: slideInDown 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  transition: opacity 0.35s ease, transform 0.35s ease;
+}
+
+.update-notification.dismissed {
+  opacity: 0 !important;
+  transform: translateY(-20px) !important;
+  pointer-events: none !important;
+}
+
+.update-icon-box {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  background: rgba(88, 101, 242, 0.2);
+  border: 1px solid rgba(88, 101, 242, 0.4);
+  border-radius: 10px;
+  font-size: 1.1rem;
+}
+
+.update-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.update-title {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: -0.01em;
+}
+
+.update-subtitle {
+  font-size: 0.72rem;
+  color: #949ba4;
+}
+
+.update-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: 6px;
+}
+
+.update-download-btn {
+  display: inline-flex;
+  align-items: center;
+  padding: 5px 12px;
+  background: linear-gradient(135deg, #5865f2, #eb459e);
+  color: #fff;
+  text-decoration: none;
+  border-radius: 8px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  cursor: pointer;
+  border: none;
+  box-shadow: 0 2px 8px rgba(88, 101, 242, 0.4);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.update-download-btn:hover {
+  transform: scale(1.04);
+  box-shadow: 0 4px 14px rgba(88, 101, 242, 0.6);
+}
+
+.update-dismiss-btn {
+  background: transparent;
+  border: none;
+  color: #949ba4;
+  font-size: 0.85rem;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 6px;
+  transition: color 0.15s ease, background 0.15s ease;
+}
+
+.update-dismiss-btn:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+@keyframes slideInDown {
+  0% {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

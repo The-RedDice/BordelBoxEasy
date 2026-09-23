@@ -62,6 +62,7 @@ fn main() {
             let username_item = MenuItem::with_id(app, "change_username", "👤 Choisir mon pseudo...", true, None::<&str>)?;
             let server_item = MenuItem::with_id(app, "config_server", "🌐 Configurer le serveur...", true, None::<&str>)?;
             let test_item = MenuItem::with_id(app, "test_card", "🎯 Tester une carte", true, None::<&str>)?;
+            let update_item = MenuItem::with_id(app, "open_download", "🚀 Télécharger la dernière version...", true, None::<&str>)?;
             let reload_item = MenuItem::with_id(app, "reload", "🔄 Recharger l'overlay", true, None::<&str>)?;
             let sep = PredefinedMenuItem::separator(app)?;
             let quit_item = MenuItem::with_id(app, "quit", "❌ Quitter BordelBox", true, None::<&str>)?;
@@ -69,7 +70,7 @@ fn main() {
             // 3. Construction du menu contextuel (clic droit)
             let menu = Menu::with_items(
                 app,
-                &[&toggle_item, &size_submenu, &username_item, &server_item, &test_item, &reload_item, &sep, &quit_item],
+                &[&toggle_item, &size_submenu, &username_item, &server_item, &test_item, &update_item, &reload_item, &sep, &quit_item],
             )?;
 
             // 4. Initialisation de l'icône dans la barre des tâches (System Tray)
@@ -133,6 +134,11 @@ fn main() {
                         "reload" => {
                             if let Some(window) = app.get_webview_window("main") {
                                 let _ = window.eval("window.location.reload()");
+                            }
+                        }
+                        "open_download" => {
+                            if let Some(window) = app.get_webview_window("main") {
+                                let _ = window.eval("window.open('https://github.com/The-RedDice/BordelBoxEasy/releases/latest', '_blank');");
                             }
                         }
                         _ => {}

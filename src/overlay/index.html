@@ -17,6 +17,23 @@
     <span class="status-key">F9</span>
   </aside>
 
+  <!-- Notification discrète de mise à jour disponible -->
+  <aside id="update-notification" class="update-notification hidden" role="alert">
+    <div class="update-icon-box">
+      <span class="update-icon">🚀</span>
+    </div>
+    <div class="update-info">
+      <strong class="update-title">Mise à jour disponible !</strong>
+      <span id="update-version-label" class="update-subtitle">Une nouvelle version de l'overlay est disponible.</span>
+    </div>
+    <div class="update-actions">
+      <a id="update-download-btn" href="https://github.com/The-RedDice/BordelBoxEasy/releases/latest" target="_blank" class="update-download-btn">
+        Télécharger
+      </a>
+      <button id="update-dismiss-btn" class="update-dismiss-btn" title="Fermer la notification">✕</button>
+    </div>
+  </aside>
+
   <!-- Conteneur principal de l'overlay (transparent par défaut) -->
   <main id="overlay-container" class="overlay-container" aria-live="polite">
 

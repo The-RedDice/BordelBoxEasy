@@ -693,3 +693,99 @@ if ('speechSynthesis' in window) {
     window.speechSynthesis.getVoices();
   };
 }
+
+// ========================================================
+// Système de détection de mise à jour de l'overlay
+// ========================================================
+const CURRENT_OVERLAY_BUILD = 'overlay-v1.0.0-b10';
+
+/**
+ * Compare une version distante avec la version courante de l'overlay
+ */
+function isNewerRelease(latestTag, currentTag) {
+  if (!latestTag || !currentTag) return false;
+  if (latestTag.toLowerCase() === currentTag.toLowerCase()) return false;
+
+  const buildRegex = /b(\d+)/i;
+  const lBuild = latestTag.match(buildRegex);
+  const cBuild = currentTag.match(buildRegex);
+
+  if (lBuild && cBuild) {
+    return parseInt(lBuild[1], 10) > parseInt(cBuild[1], 10);
+  }
+
+  const clean = (str) => str.replace(/^overlay-v?|^v?/, '').trim();
+  const lParts = clean(latestTag).split('-')[0].split('.').map((n) => parseInt(n, 10) || 0);
+  const cParts = clean(currentTag).split('-')[0].split('.').map((n) => parseInt(n, 10) || 0);
+
+  for (let i = 0; i < Math.max(lParts.length, cParts.length); i++) {
+    const l = lParts[i] || 0;
+    const c = cParts[i] || 0;
+    if (l > c) return true;
+    if (l < c) return false;
+  }
+
+  return false;
+}
+
+/**
+ * Affiche la notification discrète de mise à jour sur l'overlay
+ */
+function showUpdateNotification(releaseInfo) {
+  const notif = document.getElementById('update-notification');
+  const label = document.getElementById('update-version-label');
+  const dlBtn = document.getElementById('update-download-btn');
+  const closeBtn = document.getElementById('update-dismiss-btn');
+  if (!notif) return;
+
+  const latestTag = releaseInfo.tagName || 'nouvelle version';
+  if (sessionStorage.getItem('dismissed_update_' + latestTag) === 'true') {
+    return;
+  }
+
+  if (label) {
+    label.textContent = `Version ${latestTag} disponible (actuelle : ${CURRENT_OVERLAY_BUILD.replace('overlay-', '')})`;
+  }
+
+  const downloadUrl = releaseInfo.downloadUrl || releaseInfo.htmlUrl || 'https://github.com/The-RedDice/BordelBoxEasy/releases/latest';
+
+  if (dlBtn) {
+    dlBtn.href = downloadUrl;
+    dlBtn.onclick = () => {
+      if (window.__TAURI__ && window.__TAURI__.event) {
+        window.__TAURI__.event.emit('disable_clickthrough', {});
+        setTimeout(() => {
+          window.__TAURI__.event.emit('restore_clickthrough', {});
+        }, 1500);
+      }
+    };
+  }
+
+  notif.classList.remove('hidden');
+  notif.classList.remove('dismissed');
+
+  if (closeBtn) {
+    closeBtn.onclick = () => {
+      sessionStorage.setItem('dismissed_update_' + latestTag, 'true');
+      notif.classList.add('dismissed');
+      setTimeout(() => notif.classList.add('hidden'), 400);
+    };
+  }
+
+  // Masquage automatique après 25 secondes pour ne pas gêner en jeu
+  setTimeout(() => {
+    if (notif && !notif.classList.contains('dismissed')) {
+      notif.classList.add('dismissed');
+      setTimeout(() => notif.classList.add('hidden'), 400);
+    }
+  }, 25000);
+}
+
+// Écoute de l'événement version_info envoyé par le serveur
+socket.on('version_info', (releaseInfo) => {
+  if (releaseInfo && isNewerRelease(releaseInfo.tagName, CURRENT_OVERLAY_BUILD)) {
+    console.log(`[Overlay] 🚀 Mise à jour détectée : ${CURRENT_OVERLAY_BUILD} -> ${releaseInfo.tagName}`);
+    showUpdateNotification(releaseInfo);
+  }
+});
+
