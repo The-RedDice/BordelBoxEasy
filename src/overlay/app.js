@@ -116,10 +116,10 @@ function updateStatusIndicator() {
     statusIndicator.classList.add('disabled');
     statusLabel.textContent = 'DÉSACTIVÉ';
 
-    // Après 3 secondes d'affichage de "DÉSACTIVÉ", on masque l'indicateur pour ne pas gêner l'écran
+    // Après 1 seconde d'affichage de "DÉSACTIVÉ", on masque l'indicateur pour ne pas gêner l'écran
     statusHideTimeout = setTimeout(() => {
       statusIndicator.classList.remove('disabled');
-    }, 3000);
+    }, 1000);
   }
 }
 
